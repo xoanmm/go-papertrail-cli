@@ -119,7 +119,7 @@ func buildCLI(app *papertrail.App) *cli.App {
 			if len(papertrailActions) > 0 {
 				fmt.Println("The created items are the following")
 				for _, item := range papertrailActions {
-					fmt.Printf("- %s with ID %d and name '%s'\n", item.ItemType, item.ID, item.ItemName)
+					log.Printf("- %s with ID %d and name '%s'\n", item.ItemType, item.ID, item.ItemName)
 				}
 			}
 			return err

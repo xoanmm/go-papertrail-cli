@@ -51,9 +51,16 @@ type Links struct {
 	Search `json:"search"`
 }
 
-type Syslog    struct {
-	Hostname string `json:"hostname"`
-	Port     int    `json:"port"`
+type Syslog struct {
+	Hostname    string      `json:"hostname"`
+	Port        int         `json:"port"`
+	Description interface{} `json:"description"`
+}
+
+type Destination struct {
+	ID     int         `json:"id"`
+	Filter interface{} `json:"filter"`
+	Syslog Syslog 		`json:"syslog"`
 }
 
 type System struct {

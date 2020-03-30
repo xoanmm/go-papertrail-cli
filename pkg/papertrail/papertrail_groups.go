@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
+	"log"
 	"strconv"
 )
 
@@ -20,10 +20,10 @@ func getGroupInPapertrail(groupName string, systemWildcard string) (*Item, error
 	}
 	var groupItem *Item
 	if *groupExists {
-		fmt.Printf("Group with name %s already exists with id %d\n", groupName, groupObject.ID)
+		log.Printf("Group with name %s already exists with id %d\n", groupName, groupObject.ID)
 		groupItem = NewItem(groupObject.ID, "Group", groupObject.Name, false)
 	} else {
-		fmt.Printf("Group with name %s doesn't exist yet\n", groupName)
+		log.Printf("Group with name %s doesn't exist yet\n", groupName)
 		papertrailGroupCreated, err := createPapertrailGroup(groupName, systemWildcard)
 		if err != nil {
 			return nil, err
@@ -73,10 +73,10 @@ func createPapertrailGroup(groupName string, systemWildcard string) (*GroupObjec
 	if createGroupResp.StatusCode == 200 {
 		var group GroupObject
 		json.Unmarshal([]byte(createGroupResp.Body), &group)
-		fmt.Printf("Group with name %s and id %d was successfully created\n", group.Name, group.ID)
+		log.Printf("Group with name %s and id %d was successfully created\n", group.Name, group.ID)
 		return &group, nil
 	}
-	fmt.Printf("Problems creating group with name %s\n", groupName)
+	log.Printf("Problems creating group with name %s\n", groupName)
 	err = errors.New("Error: Response status code " + strconv.Itoa(createGroupResp.StatusCode))
 	return nil, err
 }

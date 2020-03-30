@@ -1,7 +1,6 @@
 package papertrail
 
 import (
-	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -28,7 +27,7 @@ func (a *App) PapertrailNecessaryActions(options *Options) ([]Item, error) {
 	checkNecessaryPapertrailConditions(options.Action, options.SystemType, options.IpAddress, options.DestinationId,
 		options.DestinationPort)
 	actionName := getNameOfAction(options.Action)
-	fmt.Printf("Checking conditions for %s in papertrail params: " +
+	log.Printf("Checking conditions for %s in papertrail params: " +
 		"[group-name %s] [system-wildcard %s] [search %s] [query %s]\n",
 		actionName, options.GroupName, options.SystemWildcard, options.Search, options.Query)
 	createdItems, err := getItems(options.GroupName, options.SystemWildcard, options.DestinationPort,

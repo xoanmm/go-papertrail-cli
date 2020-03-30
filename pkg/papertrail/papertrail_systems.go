@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
+	"log"
 	"strconv"
 )
 
-// papertrailApiGroupsEndpoint represents the endpoint for interact with
+// papertrailApiSystemsEndpoint represents the endpoint for interact with
 // groups in papertrail API
 const papertrailApiSystemsEndpoint = papertrailApiBaseUrl + "systems.json"
 
@@ -20,10 +20,10 @@ func getSystemInPapertrailBasedInHostname(hostname string, destinationPort int, 
 	}
 	var systemItem *Item
 	if (systemExists != nil) && *systemExists {
-		fmt.Printf("System with hostname %s already exists with id %d\n", hostname, systemObject.ID)
+		log.Printf("System with hostname %s already exists with id %d\n", hostname, systemObject.ID)
 		systemItem = NewItem(int(systemObject.ID), "System", systemObject.Name, false)
 	} else {
-		fmt.Printf("System with hostname %s doesn't exist yet\n", hostname)
+		log.Printf("System with hostname %s doesn't exist yet\n", hostname)
 		var papertrailSystemCreated *System
 		if destinationPort != 0 {
 			papertrailSystemCreated, err = createPapertrailSystemBasedInHostnameAndDestinationPort(hostname, destinationPort)
@@ -46,10 +46,10 @@ func getSystemInPapertrailBasedInAddressIp(addressIP string) (*Item, error) {
 	}
 	var systemItem *Item
 	if (systemExists != nil) && *systemExists {
-		fmt.Printf("System with IPAddress %s already exists with id %d\n", addressIP, systemObject.ID)
+		log.Printf("System with IPAddress %s already exists with id %d\n", addressIP, systemObject.ID)
 		systemItem = NewItem(int(systemObject.ID), "System", systemObject.Name, false)
 	} else {
-		fmt.Printf("System with IPAddress %s doesn't exist yet\n", addressIP)
+		log.Printf("System with IPAddress %s doesn't exist yet\n", addressIP)
 		papertrailSystemCreated, err := createPapertrailSystemBasedInIPAddress(addressIP)
 		if err != nil {
 			return nil, err
@@ -74,7 +74,13 @@ func checkSystemExistsBasedInHostname(hostname string, destinationPort int, dest
 			alreadyExists, system = checkSystemExistsBasedInHostnameAndDestinationPort(systems, hostname, destinationPort)
 
 		} else if destinationId != 0 {
-			alreadyExists, system = checkSystemExistsBasedInHostnameAndDestinationId(systems, hostname, destinationId)
+			destinationExists, err := checkIfDestinationExistById(destinationId)
+			if err != nil {
+				return nil, nil, err
+			}
+			if *destinationExists {
+				alreadyExists, system = checkSystemExistsBasedInHostnameAndDestinationId(systems, hostname, destinationId)
+			}
 		}
 	}
 	return alreadyExists, system, nil
@@ -165,7 +171,6 @@ func SystemToCreateBasedInHostnameAndDestinationPort(hostname string, destinatio
 func createPapertrailSystemBasedInHostnameAndDestinationId(hostname string, destinationId int) (*System, error){
 	papertrailSystemToCreate := SystemToCreateBasedInHostnameAndDestinationId(hostname, destinationId)
 	b, err := json.Marshal(papertrailSystemToCreate)
-	fmt.Printf("Body is %s\n", b)
 	if err != nil {
 		return nil, err
 	}
@@ -176,11 +181,11 @@ func createPapertrailSystemBasedInHostnameAndDestinationId(hostname string, dest
 	if createSystemResp.StatusCode == 200 {
 		var system System
 		json.Unmarshal([]byte(createSystemResp.Body), &system)
-		fmt.Printf("System with name %s based in hostname %s was successfully " +
+		log.Printf("System with name %s based in hostname %s was successfully " +
 			"created with id %d\n", system.Name, system.Hostname, system.ID)
 		return &system, nil
 	}
-	fmt.Printf("Problems creating system with name %s and hostname%s\n", hostname, hostname)
+	log.Printf("Problems creating system with name %s and hostname %s\n", hostname, hostname)
 	err = errors.New("Error: Response status code " + strconv.Itoa(createSystemResp.StatusCode))
 	return nil, err
 }
@@ -200,11 +205,11 @@ func createPapertrailSystemBasedInHostnameAndDestinationPort(hostname string, de
 	if createSystemResp.StatusCode == 200 {
 		var system System
 		json.Unmarshal([]byte(createSystemResp.Body), &system)
-		fmt.Printf("System with name %s based in hostname %s was successfully " +
+		log.Printf("System with name %s based in hostname %s was successfully " +
 			"created with id %d\n", system.Name, system.Hostname, system.ID)
 		return &system, nil
 	}
-	fmt.Printf("Problems creating system with name %s and hostname%s\n", hostname, hostname)
+	log.Printf("Problems creating system with name %s and hostname%s\n", hostname, hostname)
 	err = errors.New("Error: Response status code " + strconv.Itoa(createSystemResp.StatusCode))
 	return nil, err
 }
@@ -227,11 +232,11 @@ func createPapertrailSystemBasedInIPAddress(ipAddress string) (*System, error){
 	if createSystemResp.StatusCode == 200 {
 		var system System
 		json.Unmarshal([]byte(createSystemResp.Body), &system)
-		fmt.Printf("System with name %s and IPAddress %s " +
+		log.Printf("System with name %s and IPAddress %s " +
 			"was successfully created with id %d\n", system.Name, system.IPAddress, system.ID)
 		return &system, nil
 	}
-	fmt.Printf("Problems creating system with name %s and IPAddress %s\n", ipAddress, ipAddress)
+	log.Printf("Problems creating system with name %s and IPAddress %s\n", ipAddress, ipAddress)
 	err = errors.New("Error: Response status code " + strconv.Itoa(createSystemResp.StatusCode))
 	return nil, err
 }

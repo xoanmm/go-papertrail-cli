@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
+	"log"
 	"strconv"
 )
 
@@ -20,10 +20,10 @@ func getSearchInPapertrailGroup(searchName string, searchQuery string, groupId i
 	}
 	var searchItem *Item
 	if *searchExists {
-		fmt.Printf("Search with name %s already exists with id %d\n", searchObject.Name, searchObject.ID)
+		log.Printf("Search with name %s already exists with id %d\n", searchObject.Name, searchObject.ID)
 		searchItem = NewItem(searchObject.ID, "Search", searchObject.Name, false)
 	} else {
-		fmt.Printf("Search with name %s doesn't exist yet\n", searchName)
+		log.Printf("Search with name %s doesn't exist yet\n", searchName)
 		papertrailSearchCreated, err := createPapertrailSearch(searchName, searchQuery, groupId)
 		if err != nil {
 			return nil, err
@@ -75,10 +75,10 @@ func createPapertrailSearch(searchName string, searchQuery string, groupId int) 
 	}
 	if createSearchResp.StatusCode == 200 {
 		json.Unmarshal([]byte(createSearchResp.Body), &search)
-		fmt.Printf("Search with name %s and id %d was successfully created\n", search.Name, search.ID)
+		log.Printf("Search with name %s and id %d was successfully created\n", search.Name, search.ID)
 		return &search, nil
 	}
-	fmt.Printf("Problems creating search with name %s in group with id %d\n", searchName, groupId)
+	log.Printf("Problems creating search with name %s in group with id %d\n", searchName, groupId)
 	err = errors.New("Error: Response status code " + strconv.Itoa(createSearchResp.StatusCode))
 	return nil, err
 }
