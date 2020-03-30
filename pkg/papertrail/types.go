@@ -11,6 +11,18 @@ type Options struct {
 	// Wildcard to be applied on the systems defined in papertrail
 	SystemWildcard string
 
+	// Destination port for sending the logs of the indicated system/s
+	DestinationPort int
+
+	// Destination id for sending the logs of the indicated system/s
+	DestinationId int
+
+	// Source ip address from sending the logs of the indicated system/s
+	IpAddress string
+
+	// System type, can be hostname or IPAddress
+	SystemType string
+
 	// Name of saved search to be performed on logs or to be created on a group
 	Search string
 
@@ -55,6 +67,10 @@ type System struct {
 	Syslog				  `json:"syslog"`
 }
 
+func NewSystem(ID int64, name string, lastEventAt time.Time, autoDelete bool, links Links, IPAddress interface{}, hostname string, syslog Syslog) *System {
+	return &System{ID: ID, Name: name, LastEventAt: lastEventAt, AutoDelete: autoDelete, Links: links, IPAddress: IPAddress, Hostname: hostname, Syslog: syslog}
+}
+
 type GroupCreateObject struct {
 	Name           string `json:"name"`
 	SystemWildcard string `json:"system_wildcard"`
@@ -70,6 +86,10 @@ type GroupObject struct {
 	SystemWildcard string `json:"system_wildcard"`
 	Links          `json:"_links"`
 	Systems []System `json:"systems"`
+}
+
+func NewGroupObject(ID int, name string, systemWildcard string, links Links, systems []System) *GroupObject {
+	return &GroupObject{ID: ID, Name: name, SystemWildcard: systemWildcard, Links: links, Systems: systems}
 }
 
 type SearchToCreate struct {
@@ -111,6 +131,10 @@ type SearchObject struct {
 	Links SearchGroupLinks `json:"_links"`
 }
 
+func NewSearchObject(ID int, name string, query string, group SearchGroup, links SearchGroupLinks) *SearchObject {
+	return &SearchObject{ID: ID, Name: name, Query: query, Group: group, Links: links}
+}
+
 type ApiResponse struct {
 	Body 		[]byte
 	StatusCode	int
@@ -122,4 +146,44 @@ type Item struct {
 	ItemType	string
 	ItemName	string
 	Created		bool
+}
+
+func NewItem(ID int, itemType string, itemName string, created bool) *Item {
+	return &Item{ID: ID, ItemType: itemType, ItemName: itemName, Created: created}
+}
+
+type SystemBasedInHostname struct {
+	Name     string `json:"name"`
+	Hostname string `json:"hostname"`
+}
+
+type SystemToCreateBasedInHostnameToDestinationID struct {
+	System SystemBasedInHostname `json:"system"`
+	DestinationID int `json:"destination_id"`
+}
+
+func NewSystemToCreateBasedInHostnameToDestinationID(system SystemBasedInHostname, destinationID int) *SystemToCreateBasedInHostnameToDestinationID {
+	return &SystemToCreateBasedInHostnameToDestinationID{System: system, DestinationID: destinationID}
+}
+
+type SystemToCreateBasedInHostnameToDestinationPort struct {
+	System SystemBasedInHostname `json:"system"`
+	DestinationPort int `json:"destination_port"`
+}
+
+func NewSystemToCreateBasedInHostnameToDestinationPort(system SystemBasedInHostname, destinationPort int) *SystemToCreateBasedInHostnameToDestinationPort {
+	return &SystemToCreateBasedInHostnameToDestinationPort{System: system, DestinationPort: destinationPort}
+}
+
+type SystemBasedInIPAddress struct {
+	Name     	string `json:"name"`
+	IPAddress 	string `json:"ip_address"`
+}
+
+type SystemToCreateBasedInIpAddress struct {
+	System SystemBasedInIPAddress `json:"system"`
+}
+
+func NewSystemToCreateBasedInIpAddress(system SystemBasedInIPAddress) *SystemToCreateBasedInIpAddress {
+	return &SystemToCreateBasedInIpAddress{System: system}
 }

@@ -3,7 +3,9 @@ package papertrail
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"strconv"
 )
 
 // papertrailApiSearchesEndpoint represents the endpoint for interact with
@@ -16,32 +18,26 @@ func getSearchInPapertrailGroup(searchName string, searchQuery string, groupId i
 	if err != nil {
 		return nil, err
 	}
-	searchItem := Item{
-		ItemType: "Search",
-		Created:  false,
-	}
+	var searchItem *Item
 	if *searchExists {
 		fmt.Printf("Search with name %s already exists with id %d\n", searchObject.Name, searchObject.ID)
-		searchItem.ID = searchObject.ID
-		searchItem.ItemName = searchObject.Name
+		searchItem = NewItem(searchObject.ID, "Search", searchObject.Name, false)
 	} else {
 		fmt.Printf("Search with name %s doesn't exist yet\n", searchName)
 		papertrailSearchCreated, err := createPapertrailSearch(searchName, searchQuery, groupId)
 		if err != nil {
 			return nil, err
 		}
-		searchItem.ID = papertrailSearchCreated.ID
-		searchItem.ItemName = papertrailSearchCreated.Name
-		searchItem.Created = true
+		searchItem = NewItem(papertrailSearchCreated.ID, "Search", papertrailSearchCreated.Name, true)
 	}
-	return &searchItem, err
+	return searchItem, err
 }
 
 // checkSearchExists checks if a search exists in papertrail specific group, returning the information
 // of this one in case it exists
 func checkSearchExists(searchName string, searchQuery string, groupId int) (*bool, *SearchObject, error) {
 	alreadyExists := false
-	var search SearchObject
+	var search *SearchObject
 	getAllSearchesResp, err  := papertrailApiOperation("GET", papertrailApiSearchesEndpoint, nil)
 	if err != nil {
 		return nil, nil, err
@@ -52,16 +48,12 @@ func checkSearchExists(searchName string, searchQuery string, groupId int) (*boo
 		for _, item := range searches {
 			if item.Name == searchName && item.Query == searchQuery && item.Group.ID == groupId {
 				alreadyExists = true
-				search.ID = item.ID
-				search.Name = item.Name
-				search.Query = item.Query
-				search.Links = item.Links
-				search.Group = item.Group
+				search = NewSearchObject(item.ID, item.Name, item.Query, item.Group, item.Links)
 				break
 			}
 		}
 	}
-	return &alreadyExists, &search, nil
+	return &alreadyExists, search, nil
 }
 
 // createPapertrailGroup creates a papertrail search using the parameter information
@@ -87,5 +79,6 @@ func createPapertrailSearch(searchName string, searchQuery string, groupId int) 
 		return &search, nil
 	}
 	fmt.Printf("Problems creating search with name %s in group with id %d\n", searchName, groupId)
-	return &search, nil
+	err = errors.New("Error: Response status code " + strconv.Itoa(createSearchResp.StatusCode))
+	return nil, err
 }

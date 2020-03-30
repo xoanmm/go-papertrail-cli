@@ -7,6 +7,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"regexp"
+	"strings"
 )
 
 // Header necessary for interact with papertrail
@@ -23,12 +25,14 @@ type App struct{}
 // PapertrailNecessaryActions interacts with papertrails' API to do the necessary actions
 // in function of the values provided for the options
 func (a *App) PapertrailNecessaryActions(options *Options) ([]Item, error) {
-	checkNecessaryPapertrailConditions(options.Action)
+	checkNecessaryPapertrailConditions(options.Action, options.SystemType, options.IpAddress, options.DestinationId,
+		options.DestinationPort)
 	actionName := getNameOfAction(options.Action)
 	fmt.Printf("Checking conditions for %s in papertrail params: " +
 		"[group-name %s] [system-wildcard %s] [search %s] [query %s]\n",
 		actionName, options.GroupName, options.SystemWildcard, options.Search, options.Query)
-	createdItems, err := getItems(options.GroupName, options.SystemWildcard, options.Search, options.Query)
+	createdItems, err := getItems(options.GroupName, options.SystemWildcard, options.DestinationPort,
+		options.DestinationId, options.IpAddress, options.SystemType, options.Search, options.Query)
 	if err != nil {
 		return nil, err
 	}
@@ -37,8 +41,25 @@ func (a *App) PapertrailNecessaryActions(options *Options) ([]Item, error) {
 
 // getItems collects specific group and/or search details and adds
 // them to the list of created items if they have been created
-func getItems(groupName string, systemWildcard string, searchName string, searchQuery string) (*[]Item, error) {
+func getItems(groupName string, systemWildcard string, destinationPort int, destinationId int,
+	ipAddress string, systemType string, searchName string, searchQuery string) (*[]Item, error) {
 	var papertrailCreatedItems []Item
+	systems := strings.Split(systemWildcard, ", ")
+	for _, item := range systems {
+		if systemTypeIsHostname(systemType) {
+			systemItem, err := getSystemInPapertrailBasedInHostname(item, destinationPort, destinationId)
+			if err != nil {
+				return nil, err
+			}
+			addItemToCreatedItems(*systemItem, &papertrailCreatedItems)
+		} else if systemTypeIsIpAddress(systemType) {
+			systemItem, err := getSystemInPapertrailBasedInAddressIp(ipAddress)
+			if err != nil {
+				return nil, err
+			}
+			addItemToCreatedItems(*systemItem, &papertrailCreatedItems)
+		}
+	}
 	groupItem, err := getGroupInPapertrail(groupName, systemWildcard)
 	if err != nil {
 		return nil, err
@@ -89,17 +110,63 @@ func papertrailApiOperation(method string, url string, bodyToSend io.Reader) (*A
 
 // checkNecessaryPapertrailConditions checks if the conditions to provide a token to interact
 // with papertrail are met, as well as that a valid action is provided (c/create or o/obtain)
-func checkNecessaryPapertrailConditions(action string) {
+func checkNecessaryPapertrailConditions(action string, systemType string, ipAddress string, destinationId int,
+	destinationPort int) {
 	if len(papertrailToken) == 0 {
 		log.Fatalf("Error getting value of PAPERTRAIL_API_TOKEN, " +
 			"it's necessary to define this variable with your papertrail's API token")
 	}
+	checkValidActionsConditions(action)
+	checkValidSystemTypeConditions(systemType, ipAddress, destinationId, destinationPort)
+}
+
+func checkValidActionsConditions(action string) {
 	validActions := []string{"c", "create", "o", "obtain"}
 	_, found := Find(validActions, action)
 	if !found {
 		log.Fatalf("Not valid option provided for action to perform, the only valid values are: \n" +
 			"\t'c' or 'create': create new groups or search\n" +
 			"\t'o'or 'obtain': obtain logs in base of parameters provided\n")
+	}
+}
+
+func systemTypeIsHostname(systemType string) bool {
+	if systemType == "h" || systemType == "hostname" {
+		return true
+	}
+	return false
+}
+
+func systemTypeIsIpAddress(systemType string) bool {
+	if systemType == "i" || systemType == "ip-address" {
+		return true
+	}
+	return false
+}
+
+func checkValidSystemTypeConditions(systemType  string, ipAddress string, destinationId int, destinationPort int) {
+	validSystemTypes := []string{"h", "hostname", "i", "ip-address"}
+	_, found := Find(validSystemTypes, systemType)
+	if !found {
+		log.Fatalf("Not valid option provided for system, the only valid values are: \n" +
+			"\t'h' or 'hostname': system based in hostname\n" +
+			"\t'i'or 'ip-address': system based in ip-address\n")
+	} else {
+		if systemTypeIsHostname(systemType) {
+			if destinationId != 0 && destinationPort != 0 {
+				log.Fatalf("If the system is a hostname-type system, only destination " +
+					"id or destination port can be specified\n")
+			} else if !((destinationId != 0 && destinationPort == 0) ||
+				(destinationId == 0 && destinationPort != 0)) {
+				log.Fatalf("It's necessary provide a value distinct from default (0) to " +
+					"destination id or destination port")
+			}
+		} else if systemTypeIsIpAddress(systemType) {
+			re := regexp.MustCompile(`(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}`)
+			if !re.MatchString(ipAddress) {
+				log.Fatalf("The IP Address provided, %s, it's not a valid IP Address\n", ipAddress)
+			}
+		}
 	}
 }
 

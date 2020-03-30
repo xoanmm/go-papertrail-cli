@@ -52,6 +52,34 @@ func buildCLI(app *papertrail.App) *cli.App {
 				Aliases: []string{"w"},
 			},
 
+			&cli.IntFlag{
+				Name:	"destination-port",
+				Usage: 	"destination port for sending the logs of the indicated system/s",
+				Value:	0,
+				Aliases: []string{"p"},
+			},
+
+			&cli.IntFlag{
+				Name:	"destination-id",
+				Usage: 	"destination id for sending the logs of the indicated system/s",
+				Value:	0,
+				Aliases: []string{"I"},
+			},
+
+			&cli.StringFlag{
+				Name:	"ip-address",
+				Usage: 	"source ip address from sending the logs of the indicated system/s",
+				Value:	"",
+				Aliases: []string{"i"},
+			},
+
+			&cli.StringFlag{
+				Name:    "system-type",
+				Usage: 	 "Type of system, can be hostname or ip-address",
+				Value:   "system type",
+				Aliases: []string{"t"},
+			},
+
 			&cli.StringFlag{
 				Name:    "search",
 				Usage: 	 "name of saved search to be performed on logs or to be created on a group",
@@ -78,11 +106,15 @@ func buildCLI(app *papertrail.App) *cli.App {
 			logGroupName := c.String("group-name")
 
 			papertrailActions, err := app.PapertrailNecessaryActions(&papertrail.Options{
-				GroupName:                logGroupName,
-				SystemWildcard:			  c.String("system-wildcard"),
-				Search:					  c.String("search"),
-				Query:					  c.String("query"),
-				Action:					  c.String("action"),
+				GroupName:              logGroupName,
+				SystemWildcard:			c.String("system-wildcard"),
+				DestinationPort:		c.Int("destination-port"),
+				DestinationId:			c.Int("destination-id"),
+				IpAddress:				c.String("ip-address"),
+				SystemType:				c.String("system-type"),
+				Search:					c.String("search"),
+				Query:					c.String("query"),
+				Action:					c.String("action"),
 			})
 			if len(papertrailActions) > 0 {
 				fmt.Println("The created items are the following")

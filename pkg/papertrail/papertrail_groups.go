@@ -3,7 +3,9 @@ package papertrail
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"strconv"
 )
 
 // papertrailApiGroupsEndpoint represents the endpoint for interact with
@@ -16,31 +18,25 @@ func getGroupInPapertrail(groupName string, systemWildcard string) (*Item, error
 	if err != nil {
 		return nil, err
 	}
-	groupItem := Item{
-		ItemType: "Group",
-	}
+	var groupItem *Item
 	if *groupExists {
 		fmt.Printf("Group with name %s already exists with id %d\n", groupName, groupObject.ID)
-		groupItem.ID = groupObject.ID
-		groupItem.ItemName = groupObject.Name
-		groupItem.Created = false
+		groupItem = NewItem(groupObject.ID, "Group", groupObject.Name, false)
 	} else {
 		fmt.Printf("Group with name %s doesn't exist yet\n", groupName)
 		papertrailGroupCreated, err := createPapertrailGroup(groupName, systemWildcard)
 		if err != nil {
 			return nil, err
 		}
-		groupItem.ID = papertrailGroupCreated.ID
-		groupItem.ItemName = papertrailGroupCreated.Name
-		groupItem.Created = true
+		groupItem = NewItem(papertrailGroupCreated.ID, "Group", papertrailGroupCreated.Name, true)
 	}
-	return &groupItem, err
+	return groupItem, err
 }
 
 // checkGroupExists checks if a group exists in papertrail, returning the information of this one in case it exists
 func checkGroupExists(groupName string) (*bool, *GroupObject, error) {
 	alreadyExists := false
-	var group GroupObject
+	var group *GroupObject
 	getAllGroupResp, err  := papertrailApiOperation("GET", papertrailApiGroupsEndpoint, nil)
 	if err != nil {
 		return nil, nil, err
@@ -51,16 +47,12 @@ func checkGroupExists(groupName string) (*bool, *GroupObject, error) {
 		for _, item := range groups {
 			if item.Name == groupName {
 				alreadyExists = true
-				group.ID = item.ID
-				group.Name = item.Name
-				group.SystemWildcard = item.SystemWildcard
-				group.Links = item.Links
-				group.Systems = item.Systems
+				group = NewGroupObject(item.ID, item.Name, item.SystemWildcard, item.Links, item.Systems)
 				break
 			}
 		}
 	}
-	return &alreadyExists, &group, nil
+	return &alreadyExists, group, nil
 }
 
 // createPapertrailGroup creates a papertrail group using the parameter information
@@ -85,5 +77,6 @@ func createPapertrailGroup(groupName string, systemWildcard string) (*GroupObjec
 		return &group, nil
 	}
 	fmt.Printf("Problems creating group with name %s\n", groupName)
-	return nil, nil
+	err = errors.New("Error: Response status code " + strconv.Itoa(createGroupResp.StatusCode))
+	return nil, err
 }
