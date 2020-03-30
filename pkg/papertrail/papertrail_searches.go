@@ -6,6 +6,11 @@ import (
 	"fmt"
 )
 
+// papertrailApiSearchesEndpoint represents the endpoint for interact with
+// searchs in papertrail API
+const papertrailApiSearchesEndpoint = papertrailApiBaseUrl + "searches.json"
+
+// getSearchInPapertrailGroup obtains a papertrail search, creating it in case it does not exist previously
 func getSearchInPapertrailGroup(searchName string, searchQuery string, groupId int) (*Item, error) {
 	searchExists, searchObject, err := checkSearchExists(searchName, searchQuery, groupId)
 	if err != nil {
@@ -32,6 +37,8 @@ func getSearchInPapertrailGroup(searchName string, searchQuery string, groupId i
 	return &searchItem, err
 }
 
+// checkSearchExists checks if a search exists in papertrail specific group, returning the information
+// of this one in case it exists
 func checkSearchExists(searchName string, searchQuery string, groupId int) (*bool, *SearchObject, error) {
 	alreadyExists := false
 	var search SearchObject
@@ -57,6 +64,8 @@ func checkSearchExists(searchName string, searchQuery string, groupId int) (*boo
 	return &alreadyExists, &search, nil
 }
 
+// createPapertrailGroup creates a papertrail search using the parameter information
+// provided as the group information to be created in a specific group
 func createPapertrailSearch(searchName string, searchQuery string, groupId int) (*SearchObject, error){
 	var search SearchObject
 	papertrailSearchToCreate := SearchToCreateObject{SearchToCreate: SearchToCreate{

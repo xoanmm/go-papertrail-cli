@@ -16,13 +16,6 @@ const papertrailTokenName = "X-Papertrail-Token"
 var papertrailToken string = os.Getenv("PAPERTRAIL_API_TOKEN")
 // papertrailApiBaseUrl represents the base URL for all API operations in papertrail
 const papertrailApiBaseUrl = "https://papertrailapp.com/api/v1/"
-// papertrailApiGroupsEndpoint represents the endpoint for interact with
-// groups in papertrail API
-const papertrailApiGroupsEndpoint = papertrailApiBaseUrl + "groups.json"
-// papertrailApiGroupsEndpoint represents the endpoint for interact with
-// groups in papertrail API
-const papertrailApiSearchesEndpoint = papertrailApiBaseUrl + "searches.json"
-
 
 // App contains the necessary information to interact with papertrail
 type App struct{}
@@ -42,6 +35,8 @@ func (a *App) PapertrailNecessaryActions(options *Options) ([]Item, error) {
 	return *createdItems, err
 }
 
+// getItems collects specific group and/or search details and adds
+// them to the list of created items if they have been created
 func getItems(groupName string, systemWildcard string, searchName string, searchQuery string) (*[]Item, error) {
 	var papertrailCreatedItems []Item
 	groupItem, err := getGroupInPapertrail(groupName, systemWildcard)
@@ -57,6 +52,8 @@ func getItems(groupName string, systemWildcard string, searchName string, search
 	return &papertrailCreatedItems, nil
 }
 
+// addItemToCreatedItems checks whether the papertrail item has been created during
+// execution or not, if it has been created it is added to the list of created items
 func addItemToCreatedItems(papertrailItem Item, papertrailItemsCreated *[]Item) *[]Item {
 	if papertrailItem.Created {
 		*papertrailItemsCreated = append(*papertrailItemsCreated, papertrailItem)
@@ -64,6 +61,10 @@ func addItemToCreatedItems(papertrailItem Item, papertrailItemsCreated *[]Item) 
 	return papertrailItemsCreated
 }
 
+// papertrailApiOperation is generic function to interact with the papertrail API, in which
+// a series of headers necessary for the interaction with this API are established.
+// Through the parameters it is possible to indicate the type of operation, the body to be sent
+// and the specific URL of the API
 func papertrailApiOperation(method string, url string, bodyToSend io.Reader) (*ApiResponse, error) {
 	req, err := http.NewRequest(method, url, bodyToSend)
 	req.Header.Add(papertrailTokenName, papertrailToken)
@@ -86,6 +87,8 @@ func papertrailApiOperation(method string, url string, bodyToSend io.Reader) (*A
 	}, nil
 }
 
+// checkNecessaryPapertrailConditions checks if the conditions to provide a token to interact
+// with papertrail are met, as well as that a valid action is provided (c/create or o/obtain)
 func checkNecessaryPapertrailConditions(action string) {
 	if len(papertrailToken) == 0 {
 		log.Fatalf("Error getting value of PAPERTRAIL_API_TOKEN, " +
@@ -100,6 +103,8 @@ func checkNecessaryPapertrailConditions(action string) {
 	}
 }
 
+// getNameOfAction returns the name of the action to be performed according to the value obtained
+// for the action parameter
 func getNameOfAction(actionOptionName string) string {
 	if actionOptionName == "c" || actionOptionName == "create" {
 		return "create"

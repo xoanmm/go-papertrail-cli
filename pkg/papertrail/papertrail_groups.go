@@ -6,6 +6,11 @@ import (
 	"fmt"
 )
 
+// papertrailApiGroupsEndpoint represents the endpoint for interact with
+// groups in papertrail API
+const papertrailApiGroupsEndpoint = papertrailApiBaseUrl + "groups.json"
+
+// getGroupInPapertrail obtains a papertrail group, creating it in case it does not exist previously
 func getGroupInPapertrail(groupName string, systemWildcard string) (*Item, error) {
 	groupExists, groupObject, err := checkGroupExists(groupName)
 	if err != nil {
@@ -32,6 +37,7 @@ func getGroupInPapertrail(groupName string, systemWildcard string) (*Item, error
 	return &groupItem, err
 }
 
+// checkGroupExists checks if a group exists in papertrail, returning the information of this one in case it exists
 func checkGroupExists(groupName string) (*bool, *GroupObject, error) {
 	alreadyExists := false
 	var group GroupObject
@@ -57,6 +63,8 @@ func checkGroupExists(groupName string) (*bool, *GroupObject, error) {
 	return &alreadyExists, &group, nil
 }
 
+// createPapertrailGroup creates a papertrail group using the parameter information
+// provided as the group information to be created
 func createPapertrailGroup(groupName string, systemWildcard string) (*GroupObject, error){
 	papertrailGroupToCreate := GroupCreationObject{Group: GroupCreateObject{
 		Name:           groupName,
