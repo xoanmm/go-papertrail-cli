@@ -16,7 +16,7 @@ func checkIfDestinationExistById(destinationId int) (*bool, error) {
 	exists := false
 	destinationIdUrl := strings.SplitAfter(papertrailApiDestinationsEndpoint, "destinations")[0] +
 		"/" + strconv.Itoa(destinationId) + strings.SplitAfter(papertrailApiDestinationsEndpoint, "destinations")[1]
-	getDestination, err  := papertrailApiOperation("GET", destinationIdUrl, nil)
+	getDestination, err  := ApiOperation("GET", destinationIdUrl, nil)
 	if err != nil {
 		return nil, err
 	}

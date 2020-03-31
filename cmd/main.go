@@ -1,10 +1,10 @@
 package main
 
 import (
-	"fmt"
 	"github.com/xoanmm/go-papertrail-cli/pkg/papertrail"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/urfave/cli/v2"
@@ -76,7 +76,7 @@ func buildCLI(app *papertrail.App) *cli.App {
 			&cli.StringFlag{
 				Name:    "system-type",
 				Usage: 	 "Type of system, can be hostname or ip-address",
-				Value:   "system type",
+				Value:   "hostname",
 				Aliases: []string{"t"},
 			},
 
@@ -96,7 +96,7 @@ func buildCLI(app *papertrail.App) *cli.App {
 
 			&cli.StringFlag{
 				Name: 	 "action",
-				Usage: 	 "Action to be performed with the information provided for papertrail, possible values only c(create) and o(obtain)",
+				Usage: 	 "Action to be performed with the information provided for papertrail, possible values only c(create), o(obtain) or d(delete)",
 				Value:   "c",
 				Aliases: []string{"a"},
 			},
@@ -105,7 +105,7 @@ func buildCLI(app *papertrail.App) *cli.App {
 			// path, _ := filepath.Abs(c.String("path"))
 			logGroupName := c.String("group-name")
 
-			papertrailActions, err := app.PapertrailNecessaryActions(&papertrail.Options{
+			papertrailActions, action, err := app.PapertrailNecessaryActions(&papertrail.Options{
 				GroupName:              logGroupName,
 				SystemWildcard:			c.String("system-wildcard"),
 				DestinationPort:		c.Int("destination-port"),
@@ -117,7 +117,7 @@ func buildCLI(app *papertrail.App) *cli.App {
 				Action:					c.String("action"),
 			})
 			if len(papertrailActions) > 0 {
-				fmt.Println("The created items are the following")
+				log.Printf("%s actions have been carried out on the following elements\n", strings.Title(*action))
 				for _, item := range papertrailActions {
 					log.Printf("- %s with ID %d and name '%s'\n", item.ItemType, item.ID, item.ItemName)
 				}

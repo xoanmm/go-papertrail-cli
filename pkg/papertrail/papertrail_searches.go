@@ -20,15 +20,15 @@ func getSearchInPapertrailGroup(searchName string, searchQuery string, groupId i
 	}
 	var searchItem *Item
 	if *searchExists {
-		log.Printf("Search with name %s already exists with id %d\n", searchObject.Name, searchObject.ID)
-		searchItem = NewItem(searchObject.ID, "Search", searchObject.Name, false)
+		log.Printf("Search with name %s exists with id %d\n", searchObject.Name, searchObject.ID)
+		searchItem = NewItem(searchObject.ID, "Search", searchObject.Name, false, false)
 	} else {
 		log.Printf("Search with name %s doesn't exist yet\n", searchName)
 		papertrailSearchCreated, err := createPapertrailSearch(searchName, searchQuery, groupId)
 		if err != nil {
 			return nil, err
 		}
-		searchItem = NewItem(papertrailSearchCreated.ID, "Search", papertrailSearchCreated.Name, true)
+		searchItem = NewItem(papertrailSearchCreated.ID, "Search", papertrailSearchCreated.Name, true, false)
 	}
 	return searchItem, err
 }
@@ -38,7 +38,7 @@ func getSearchInPapertrailGroup(searchName string, searchQuery string, groupId i
 func checkSearchExists(searchName string, searchQuery string, groupId int) (*bool, *SearchObject, error) {
 	alreadyExists := false
 	var search *SearchObject
-	getAllSearchesResp, err  := papertrailApiOperation("GET", papertrailApiSearchesEndpoint, nil)
+	getAllSearchesResp, err  := ApiOperation("GET", papertrailApiSearchesEndpoint, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -69,7 +69,7 @@ func createPapertrailSearch(searchName string, searchQuery string, groupId int) 
 	if err != nil {
 		return nil, err
 	}
-	createSearchResp, err  := papertrailApiOperation("POST", papertrailApiSearchesEndpoint, bytes.NewBuffer(b))
+	createSearchResp, err  := ApiOperation("POST", papertrailApiSearchesEndpoint, bytes.NewBuffer(b))
 	if err != nil {
 		return nil, err
 	}

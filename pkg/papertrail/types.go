@@ -153,10 +153,11 @@ type Item struct {
 	ItemType	string
 	ItemName	string
 	Created		bool
+	Deleted		bool
 }
 
-func NewItem(ID int, itemType string, itemName string, created bool) *Item {
-	return &Item{ID: ID, ItemType: itemType, ItemName: itemName, Created: created}
+func NewItem(ID int, itemType string, itemName string, created bool, deleted bool) *Item {
+	return &Item{ID: ID, ItemType: itemType, ItemName: itemName, Created: created, Deleted: deleted}
 }
 
 type SystemBasedInHostname struct {
