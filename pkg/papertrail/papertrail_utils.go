@@ -139,3 +139,14 @@ func Find(slice []string, val string) (int, bool) {
 	}
 	return -1, false
 }
+
+func checkElementsCreatedOrRemoved(papertrailToAddItems []Item) bool {
+	createdOrRemoved := false
+	for _, item := range papertrailToAddItems {
+		if item.Deleted || item.Created {
+			createdOrRemoved = true
+			break
+		}
+	}
+	return createdOrRemoved
+}

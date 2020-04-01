@@ -27,8 +27,12 @@ func (a *App) PapertrailNecessaryActions(options *Options) ([]Item, *string, err
 		"[group-name %s] [system-wildcard %s] [search %s] [query %s]\n",
 		actionName, options.GroupName, options.SystemWildcard, options.Search, options.Query)
 	createdOrDeletedItems, action, err := getItems(options.GroupName, options.SystemWildcard, options.DestinationPort,
-		options.DestinationId, options.IpAddress, options.SystemType, options.Search, options.Query, actionName)
+		options.DestinationId, options.IpAddress, options.SystemType,
+		options.Search, options.Query, actionName, options.DeleteAllSearches)
 	if err != nil {
+		if createdOrDeletedItems != nil {
+			return *createdOrDeletedItems, action, err
+		}
 		return nil, nil, err
 	}
 	return *createdOrDeletedItems, action, err
@@ -37,61 +41,70 @@ func (a *App) PapertrailNecessaryActions(options *Options) ([]Item, *string, err
 // getItems collects specific group and/or search details and adds
 // them to the list of created items if they have been created
 func getItems(groupName string, systemWildcard string, destinationPort int, destinationId int,
-	ipAddress string, systemType string, searchName string, searchQuery string, actionName string) (*[]Item, *string, error) {
-	var papertrailCreatedItems []Item
+	ipAddress string, systemType string, searchName string, searchQuery string, actionName string,
+	deleteAll bool) (*[]Item, *string, error) {
+	var papertrailCreatedOrRemovedItems []Item
 	var err error
-	papertrailCreatedItems, err = addSystemElements(systemType, systemWildcard,
+	papertrailCreatedOrRemovedItems, err = addSystemElements(systemType, systemWildcard,
 		destinationPort, destinationId, ipAddress, actionName)
 	if err != nil {
 		return nil, nil, err
 	}
-	groupItem, err := doPapertrailGroupNecessaryActions(groupName, actionName, systemWildcard)
+	groupAndSearchItems, err := addGroupsAndSearches(groupName, systemWildcard, actionName, searchName, searchQuery, deleteAll)
 	if err != nil {
-		return nil, nil, err
+		return &papertrailCreatedOrRemovedItems, &actionName, err
 	}
-	papertrailCreatedItems = addItemToCreatedOrDeletedItems(*groupItem, papertrailCreatedItems)
-	if !ActionIsDelete(actionName) {
-		searchItem, err := getSearchInPapertrailGroup(searchName, searchQuery, groupItem.ID)
+	papertrailCreatedOrRemovedItems = addItemsToCreatedOrDeletedItems(groupAndSearchItems, papertrailCreatedOrRemovedItems)
+	return &papertrailCreatedOrRemovedItems, &actionName, nil
+}
+
+func addGroupsAndSearches(groupName string, systemWildcard string, actionName string, searchName string,
+	searchQuery string, deleteAll bool) ([]Item, error) {
+	var papertrailCreatedItems []Item
+	if ActionIsDelete(actionName) {
+		var err error
+		papertrailCreatedItems, err = addGroupAndSearchesDeleted(deleteAll, groupName, actionName,
+		systemWildcard, searchName, searchQuery)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
+		}
+	} else {
+		groupItem, err := doPapertrailGroupNecessaryActions(groupName, actionName, systemWildcard)
+		if err != nil {
+			return nil, err
+		}
+		papertrailCreatedItems = addItemToCreatedOrDeletedItems(*groupItem, papertrailCreatedItems)
+		searchItem, err := doPapertrailSearchesNecessaryActions(searchName, searchQuery, groupItem.ID, actionName)
+		if err != nil {
+			return nil, err
 		}
 		papertrailCreatedItems = addItemToCreatedOrDeletedItems(*searchItem, papertrailCreatedItems)
 	}
-	return &papertrailCreatedItems, &actionName, nil
+	return papertrailCreatedItems, nil
 }
 
-// TODO: function addGroupsAndSearches need distinction between create and delete for recover necessary information and delete respecting relationships between elements
-
-//func addGroupsAndSearches(groupName string, systemWildcard string, actionName string, searchName string,
-//	searchQuery string) ([]Item, error) {
-//	var papertrailCreatedItems []Item
-//	if ActionIsDelete(actionName) {
-//		searchItem, err := getSearchInPapertrailGroup(searchName, searchQuery, groupItem.ID)
-//		if err != nil {
-//			return nil, err
-//		}
-//		papertrailCreatedItems = addItemToCreatedOrDeletedItems(*searchItem, papertrailCreatedItems)
-//		groupItem, err := doPapertrailGroupNecessaryActions(groupName, systemWildcard, actionName)
-//		if err != nil {
-//			return nil, err
-//		}
-//		papertrailCreatedItems = addItemToCreatedOrDeletedItems(*groupItem, papertrailCreatedItems)
-//	} else if ActionIsCreate(actionName) {
-//		groupItem, err := doPapertrailGroupNecessaryActions(groupName, systemWildcard, actionName)
-//		if err != nil {
-//			return nil, err
-//		}
-//		papertrailCreatedItems = addItemToCreatedOrDeletedItems(*groupItem, papertrailCreatedItems)
-//		if !ActionIsDelete(actionName) {
-//			searchItem, err := getSearchInPapertrailGroup(searchName, searchQuery, groupItem.ID)
-//			if err != nil {
-//				return nil, err
-//			}
-//			papertrailCreatedItems = addItemToCreatedOrDeletedItems(*searchItem, papertrailCreatedItems)
-//		}
-//	}
-//	return papertrailCreatedItems, nil
-//}
+func addGroupAndSearchesDeleted(deleteAll bool, groupName string, actionName string,
+	systemWildcard string, searchName string, searchQuery string) ([]Item, error) {
+	var papertrailCreatedItems []Item
+	if deleteAll {
+		groupItem, err := doPapertrailGroupNecessaryActions(groupName, actionName, systemWildcard)
+		if err != nil {
+			return nil, err
+		}
+		papertrailCreatedItems = addItemToCreatedOrDeletedItems(*groupItem, papertrailCreatedItems)
+	} else {
+		groupItem, err := doPapertrailGroupNecessaryActions(groupName, "obtain", systemWildcard)
+		if err != nil {
+			return nil, err
+		}
+		searchItem, err := doPapertrailSearchesNecessaryActions(searchName, searchQuery, groupItem.ID, actionName)
+		if err != nil {
+			return nil, err
+		}
+		papertrailCreatedItems = addItemToCreatedOrDeletedItems(*searchItem, papertrailCreatedItems)
+	}
+	return papertrailCreatedItems, nil
+}
 
 // addSystemElements collects specific system/s details and adds
 // them to the list of created/deleted items if they have been created or deleted
@@ -119,12 +132,22 @@ func addSystemElements(systemType string, systemWildcard string, destinationPort
 	return papertrailCreatedItems, nil
 }
 
-// addItemToCreatedOrDeletedItems checks whether the papertrail item has been created or deleted during
+// addItemsToCreatedOrDeletedItems checks whether the papertrail item has been created or deleted during
 // execution or not, if it has been created/deleted it is added to the list of created items
-func addItemToCreatedOrDeletedItems(papertrailItem Item, papertrailItemsCreatedOrDeleted []Item) []Item {
+func addItemsToCreatedOrDeletedItems(papertrailToAddItems []Item, papertrailItemsCreatedOrDeleted []Item) []Item {
+	if checkElementsCreatedOrRemoved(papertrailToAddItems) {
+		return append(papertrailItemsCreatedOrDeleted, papertrailToAddItems...)
+	}
+	return papertrailItemsCreatedOrDeleted
+
+}
+
+// addItemsToCreatedOrDeletedItems checks whether the papertrail item has been created or deleted during
+// execution or not, if it has been created/deleted it is added to the list of created items
+func addItemToCreatedOrDeletedItems(papertrailToAddItem Item, papertrailItemsCreatedOrDeleted []Item) []Item {
 	var newItems []Item
-	if papertrailItem.Created || papertrailItem.Deleted{
-		newItems = append(papertrailItemsCreatedOrDeleted, papertrailItem)
+	if papertrailToAddItem.Deleted || papertrailToAddItem.Created {
+		newItems = append(papertrailItemsCreatedOrDeleted, papertrailToAddItem)
 	} else {
 		return papertrailItemsCreatedOrDeleted
 	}

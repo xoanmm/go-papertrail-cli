@@ -31,6 +31,9 @@ type Options struct {
 
 	// Action to be performed with the information provided for papertrail, possible values only c(create) and o(obtain)
 	Action string
+
+	// Indicates if all searches in a group or a specific search are to be deleted
+	DeleteAllSearches bool
 }
 
 type Self struct {

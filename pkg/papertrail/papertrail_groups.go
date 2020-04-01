@@ -20,58 +20,54 @@ func doPapertrailGroupNecessaryActions(groupName string, actionName string, syst
 	if err != nil {
 		return nil, err
 	}
-	if ActionIsObtain(actionName) {
-		groupItem, err = getGroup(*groupExists, groupObject.ID, groupObject.Name)
-		if err != nil {
-			return nil, err
+	if *groupExists {
+		log.Printf("Group with name %s exists with id %d\n", groupName, groupObject.ID)
+		if ActionIsObtain(actionName) || ActionIsCreate(actionName) {
+			groupItem, err = getGroup(groupObject.ID, groupObject.Name)
+			if err != nil {
+				return nil, err
+			}
+		} else if ActionIsDelete(actionName) {
+			groupItem, err = deleteGroup(groupObject.ID, groupObject.Name)
+			if err != nil {
+				return nil, err
+			}
 		}
-	} else if ActionIsCreate(actionName) {
-		groupItem, err = createGroup(*groupExists, groupObject.ID, groupObject.Name, systemWildcard)
-		if err != nil {
-			return nil, err
-		}
-	} else if ActionIsDelete(actionName) {
-		groupItem, err = deleteGroup(*groupExists, groupObject.ID, groupObject.Name)
-		if err != nil {
+	} else if !*groupExists {
+		if ActionIsCreate(actionName) {
+			groupItem, err = createGroup(groupName, systemWildcard)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			err := errors.New("Error: Group with name" + groupName + "doesn't exist")
 			return nil, err
 		}
 	}
 	return groupItem, nil
 }
 
-func getGroup(groupExists bool, groupId int, groupName string) (*Item, error) {
-	if groupExists {
-		return NewItem(groupId, "Group", groupName, false, false), nil
-	} else {
-		err := errors.New("Error getting group: Group with name " + groupName + " doesn't exist")
+func getGroup(groupId int, groupName string) (*Item, error) {
+	return NewItem(groupId, "Group", groupName, false, false), nil
+}
+
+func createGroup(groupName string, systemWildcard string) (*Item, error) {
+	papertrailGroupCreated, err := createPapertrailGroupOperation(groupName, systemWildcard)
+	if err != nil {
+			return nil, err
+		}
+	return NewItem(papertrailGroupCreated.ID, "Group", papertrailGroupCreated.Name, true, false), nil
+}
+
+func deleteGroup(groupId int, groupName string) (*Item, error){
+	papertrailGroupDeleted, err := deletePapertrailGroupOperation(groupName, groupId)
+	if err != nil {
 		return nil, err
 	}
-}
-
-func createGroup(groupExists bool, groupId int, groupName string, systemWildcard string) (*Item, error) {
-	if groupExists {
-		return NewItem(groupId, "Group", groupName, false, false), nil
-	} else {
-		papertrailGroupCreated, err := createPapertrailGroupAction(groupName, systemWildcard)
-		if err != nil {
-			return nil, err
-		}
-		return NewItem(papertrailGroupCreated.ID, "Group", papertrailGroupCreated.Name, true, false), nil
+	if *papertrailGroupDeleted {
+		return NewItem(groupId, "Group", groupName, false, true), nil
 	}
-}
-
-func deleteGroup(groupExists bool, groupId int, groupName string) (*Item, error){
-	if groupExists {
-		papertrailGroupDeleted, err := deletePapertrailGroupOperation(groupName, groupId)
-		if err != nil {
-			return nil, err
-		}
-		if *papertrailGroupDeleted {
-			return NewItem(groupId, "Group", groupName, false, true), nil
-		}
-	}
-	err := errors.New("Error: Group with " + groupName + " doesn't exist")
-	return nil, err
+	return nil, errors.New("Error: Group with " + groupName + " doesn't exist")
 }
 
 // checkGroupExists checks if a group exists in papertrail, returning the information of this one in case it exists
@@ -98,7 +94,7 @@ func checkGroupExists(groupName string) (*bool, *GroupObject, error) {
 
 // createPapertrailGroup creates a papertrail group using the parameter information
 // provided as the group information to be created
-func createPapertrailGroupAction(groupName string, systemWildcard string) (*GroupObject, error){
+func createPapertrailGroupOperation(groupName string, systemWildcard string) (*GroupObject, error){
 	papertrailGroupToCreate := GroupCreationObject{Group: GroupCreateObject{
 		Name:           groupName,
 		SystemWildcard: systemWildcard,

@@ -83,7 +83,7 @@ func buildCLI(app *papertrail.App) *cli.App {
 			&cli.StringFlag{
 				Name:    "search",
 				Usage: 	 "name of saved search to be performed on logs or to be created on a group",
-				Value:   "saved search",
+				Value:   "default search",
 				Aliases: []string{"S"},
 			},
 
@@ -100,6 +100,13 @@ func buildCLI(app *papertrail.App) *cli.App {
 				Value:   "c",
 				Aliases: []string{"a"},
 			},
+
+			&cli.BoolFlag{
+				Name: 	 "delete-all-searches",
+				Usage: 	 "Indicates if all searches in a group or a specific search are to be deleted",
+				Value:   false,
+				Aliases: []string{"d"},
+			},
 		},
 		Action: func(c *cli.Context) error {
 			// path, _ := filepath.Abs(c.String("path"))
@@ -115,6 +122,7 @@ func buildCLI(app *papertrail.App) *cli.App {
 				Search:					c.String("search"),
 				Query:					c.String("query"),
 				Action:					c.String("action"),
+				DeleteAllSearches:		c.Bool("delete-all-searches"),
 			})
 			if len(papertrailActions) > 0 {
 				log.Printf("%s actions have been carried out on the following elements\n", strings.Title(*action))
