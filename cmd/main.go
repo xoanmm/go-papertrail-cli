@@ -6,8 +6,6 @@ import (
 	"os"
 	"strings"
 	"time"
-
-	"github.com/urfave/cli/v2"
 )
 
 var version = "1.0.0"
@@ -112,7 +110,7 @@ func buildCLI(app *papertrail.App) *cli.App {
 			// path, _ := filepath.Abs(c.String("path"))
 			logGroupName := c.String("group-name")
 
-			papertrailActions, action, err := app.PapertrailNecessaryActions(&papertrail.Options{
+			papertrailActions, action, err := app.PapertrailActions(&papertrail.Options{
 				GroupName:              logGroupName,
 				SystemWildcard:			c.String("system-wildcard"),
 				DestinationPort:		c.Int("destination-port"),

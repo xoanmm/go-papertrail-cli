@@ -13,7 +13,8 @@ import (
 // groups in papertrail API
 const papertrailApiGroupsEndpoint = papertrailApiBaseUrl + "groups.json"
 
-//
+// doPapertrailGroupNecessaryActions is in charge of carrying out the indicated actions
+// on the indicated papertrail group, as well as checking if it exists
 func doPapertrailGroupNecessaryActions(groupName string, actionName string, systemWildcard string) (*Item, error) {
 	var groupItem *Item
 	groupExists, groupObject, err := checkGroupExists(groupName)
@@ -22,19 +23,16 @@ func doPapertrailGroupNecessaryActions(groupName string, actionName string, syst
 	}
 	if *groupExists {
 		log.Printf("Group with name %s exists with id %d\n", groupName, groupObject.ID)
-		if ActionIsObtain(actionName) || ActionIsCreate(actionName) {
-			groupItem, err = getGroup(groupObject.ID, groupObject.Name)
-			if err != nil {
-				return nil, err
-			}
-		} else if ActionIsDelete(actionName) {
+		if actionIsObtain(actionName) || actionIsCreate(actionName) {
+			return NewItem(groupObject.ID, "Group", groupName, false, false), nil
+		} else if actionIsDelete(actionName) {
 			groupItem, err = deleteGroup(groupObject.ID, groupObject.Name)
 			if err != nil {
 				return nil, err
 			}
 		}
 	} else if !*groupExists {
-		if ActionIsCreate(actionName) {
+		if actionIsCreate(actionName) {
 			groupItem, err = createGroup(groupName, systemWildcard)
 			if err != nil {
 				return nil, err
@@ -47,10 +45,7 @@ func doPapertrailGroupNecessaryActions(groupName string, actionName string, syst
 	return groupItem, nil
 }
 
-func getGroup(groupId int, groupName string) (*Item, error) {
-	return NewItem(groupId, "Group", groupName, false, false), nil
-}
-
+// createGroup attempts to create a group in papertrail using the parameters provided as group information
 func createGroup(groupName string, systemWildcard string) (*Item, error) {
 	papertrailGroupCreated, err := createPapertrailGroupOperation(groupName, systemWildcard)
 	if err != nil {
@@ -59,6 +54,7 @@ func createGroup(groupName string, systemWildcard string) (*Item, error) {
 	return NewItem(papertrailGroupCreated.ID, "Group", papertrailGroupCreated.Name, true, false), nil
 }
 
+// deleteGroup attempts to delete a group using the parameters provided as group information
 func deleteGroup(groupId int, groupName string) (*Item, error){
 	papertrailGroupDeleted, err := deletePapertrailGroupOperation(groupName, groupId)
 	if err != nil {
@@ -74,7 +70,7 @@ func deleteGroup(groupId int, groupName string) (*Item, error){
 func checkGroupExists(groupName string) (*bool, *GroupObject, error) {
 	alreadyExists := false
 	var group *GroupObject
-	getAllGroupResp, err  := ApiOperation("GET", papertrailApiGroupsEndpoint, nil)
+	getAllGroupResp, err  := apiOperation("GET", papertrailApiGroupsEndpoint, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -92,8 +88,8 @@ func checkGroupExists(groupName string) (*bool, *GroupObject, error) {
 	return &alreadyExists, group, nil
 }
 
-// createPapertrailGroup creates a papertrail group using the parameter information
-// provided as the group information to be created
+// createPapertrailGroupOperation do the necessary calls in papertrail
+// to create a group using the parameter information provided as the group information to be created
 func createPapertrailGroupOperation(groupName string, systemWildcard string) (*GroupObject, error){
 	papertrailGroupToCreate := GroupCreationObject{Group: GroupCreateObject{
 		Name:           groupName,
@@ -103,7 +99,7 @@ func createPapertrailGroupOperation(groupName string, systemWildcard string) (*G
 	if err != nil {
 		return nil, err
 	}
-	createGroupResp, err  := ApiOperation("POST", papertrailApiGroupsEndpoint, bytes.NewBuffer(b))
+	createGroupResp, err  := apiOperation("POST", papertrailApiGroupsEndpoint, bytes.NewBuffer(b))
 	if err != nil {
 		return nil, err
 	}
@@ -118,13 +114,13 @@ func createPapertrailGroupOperation(groupName string, systemWildcard string) (*G
 	return nil, err
 }
 
-// deletePapertrailGroup deletes a papertrail group using the groupId
-// provided as the group information to be deleted
+// deletePapertrailGroupOperation do the necessary calls in papertrail
+// to delete a group using the parameter information provided as the group information to be deleted
 func deletePapertrailGroupOperation(groupName string, groupId int) (*bool, error){
 	deleted := false
 	groupIdUrl := strings.SplitAfter(papertrailApiGroupsEndpoint, "groups")[0] +
 		"/" + strconv.Itoa(groupId) + strings.SplitAfter(papertrailApiGroupsEndpoint, "groups")[1]
-	deleteGroupResp, err  := ApiOperation("DELETE", groupIdUrl, nil)
+	deleteGroupResp, err  := apiOperation("DELETE", groupIdUrl, nil)
 	if err != nil {
 		return nil, err
 	}

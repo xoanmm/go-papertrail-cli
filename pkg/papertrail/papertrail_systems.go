@@ -23,17 +23,18 @@ func getSystemInPapertrailBasedInHostname(hostname string, destinationPort int, 
 	var systemItem *Item
 	if (systemExists != nil) && *systemExists {
 		log.Printf("System with hostname %s exists with id %d\n", hostname, systemObject.ID)
-		if ActionIsCreate(actionName) {
+		if actionIsCreate(actionName) {
 			systemItem = NewItem(int(systemObject.ID), "System", systemObject.Name, false, false)
-		} else if ActionIsDelete(actionName) {
+		} else if actionIsDelete(actionName) {
 			deleted, err := deletePapertrailSystem(int(systemObject.ID))
 			if err != nil {
 				return nil, err
 			}
-			systemItem = NewItem(int(systemObject.ID), "System", systemObject.Name, false, *deleted)
-			return systemItem, err
+			if *deleted {
+				systemItem = NewItem(int(systemObject.ID), "System", systemObject.Name, false, *deleted)
+			}
 		}
-	} else if ActionIsCreate(actionName){
+	} else if actionIsCreate(actionName){
 		log.Printf("System with hostname %s doesn't exist yet\n", hostname)
 		var papertrailSystemCreated *System
 		if destinationPort != 0 {
@@ -45,14 +46,14 @@ func getSystemInPapertrailBasedInHostname(hostname string, destinationPort int, 
 			return nil, err
 		}
 		systemItem = NewItem(int(papertrailSystemCreated.ID), "System", papertrailSystemCreated.Name, true, false)
-	} else if ActionIsDelete(actionName) {
+	} else if actionIsDelete(actionName) {
 		err = errors.New("Error: System specified doesn't exist ")
 	}
 	return systemItem, err
 }
 
 // getSystemInPapertrail obtains a papertrail system, creating it in case it does not exist previously
-func getSystemInPapertrailBasedInAddressIp(addressIP string) (*Item, error) {
+func getSystemInPapertrailBasedInAddressIp(addressIP string, actionName string) (*Item, error) {
 	systemExists, systemObject, err := checkSystemExistsBasedInAddressIP(addressIP)
 	if err != nil {
 		return nil, err
@@ -60,21 +61,36 @@ func getSystemInPapertrailBasedInAddressIp(addressIP string) (*Item, error) {
 	var systemItem *Item
 	if (systemExists != nil) && *systemExists {
 		log.Printf("System with IPAddress %s exists with id %d\n", addressIP, systemObject.ID)
-		systemItem = NewItem(int(systemObject.ID), "System", systemObject.Name, false, false)
-	} else {
+		if actionIsCreate(actionName) || actionIsObtain(actionName) {
+			systemItem = NewItem(int(systemObject.ID), "System", systemObject.Name, false, false)
+		} else if actionIsDelete(actionName) {
+			deletedSystem, err := deletePapertrailSystem(int(systemObject.ID))
+			if err!= nil {
+				return nil, err
+			}
+			if *deletedSystem {
+				systemItem = NewItem(int(systemObject.ID), "System", systemObject.Name, false, true)
+			}
+		}
+	} else if (systemExists != nil) && !*systemExists {
 		log.Printf("System with IPAddress %s doesn't exist yet\n", addressIP)
-		papertrailSystemCreated, err := createPapertrailSystemBasedInIPAddress(addressIP)
-		if err != nil {
+		if actionIsCreate(actionName) {
+			systemItemCreated, err := createPapertrailSystemBasedInIPAddress(addressIP)
+			if err != nil {
+				return nil, err
+			}
+			systemItem = NewItem(int(systemItemCreated.ID), "System", systemItemCreated.Name, true, false)
+		} else {
+			err := errors.New("Error: System " + addressIP + " doesn't exists yet ")
 			return nil, err
 		}
-		systemItem = NewItem(int(papertrailSystemCreated.ID), "System", papertrailSystemCreated.Name, true, false)
 	}
 	return systemItem, err
 }
 
 // checkSystemExists checks if a system exists in papertrail, returning the information of this one in case it exists
 func checkSystemExistsBasedInHostname(hostname string, destinationPort int, destinationId int) (*bool, *System, error) {
-	getAllSystems, err  := ApiOperation("GET", papertrailApiSystemsEndpoint, nil)
+	getAllSystems, err  := apiOperation("GET", papertrailApiSystemsEndpoint, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -87,12 +103,12 @@ func checkSystemExistsBasedInHostname(hostname string, destinationPort int, dest
 			alreadyExists, system = checkSystemExistsBasedInHostnameAndDestinationPort(systems, hostname, destinationPort)
 
 		} else if destinationId != 0 {
-			destinationExists, err := checkIfDestinationExistById(destinationId)
+			destinationExists, destinationInfo, err := checkIfDestinationExistById(destinationId)
 			if err != nil {
 				return nil, nil, err
 			}
 			if *destinationExists {
-				alreadyExists, system = checkSystemExistsBasedInHostnameAndDestinationId(systems, hostname, destinationId)
+				alreadyExists, system = checkSystemExistsBasedInHostnameAndDestinationId(systems, hostname, destinationInfo)
 			}
 		}
 	}
@@ -101,7 +117,7 @@ func checkSystemExistsBasedInHostname(hostname string, destinationPort int, dest
 
 // checkSystemExists checks if a system exists in papertrail, returning the information of this one in case it exists
 func checkSystemExistsBasedInAddressIP(addressIP string) (*bool, *System, error) {
-	getAllSystems, err  := ApiOperation("GET", papertrailApiSystemsEndpoint, nil)
+	getAllSystems, err  := apiOperation("GET", papertrailApiSystemsEndpoint, nil)
 	alreadyExists := false
 	if err != nil {
 		return nil, nil, err
@@ -143,11 +159,14 @@ func checkSystemExistsBasedInHostnameAndDestinationPort(systems []System, hostna
 	return &alreadyExists, system
 }
 
-func checkSystemExistsBasedInHostnameAndDestinationId(systems []System, hostname string, destinationId int) (*bool, *System){
+func checkSystemExistsBasedInHostnameAndDestinationId(systems []System, hostname string,
+	destinationInfo *Destination) (*bool, *System){
 	var system *System
 	alreadyExists := false
 	for _, item := range systems {
-		if item.Hostname == hostname && int(item.ID) == destinationId {
+		if item.Hostname == hostname && item.Syslog.Hostname == destinationInfo.Syslog.Hostname &&
+			item.Syslog.Port == destinationInfo.Syslog.Port {
+			alreadyExists = true
 			system = NewSystem(
 				item.ID,
 				item.Name,
@@ -187,7 +206,7 @@ func createPapertrailSystemBasedInHostnameAndDestinationId(hostname string, dest
 	if err != nil {
 		return nil, err
 	}
-	createSystemResp, err  := ApiOperation("POST", papertrailApiSystemsEndpoint, bytes.NewBuffer(b))
+	createSystemResp, err  := apiOperation("POST", papertrailApiSystemsEndpoint, bytes.NewBuffer(b))
 	if err != nil {
 		return nil, err
 	}
@@ -211,7 +230,7 @@ func createPapertrailSystemBasedInHostnameAndDestinationPort(hostname string, de
 	if err != nil {
 		return nil, err
 	}
-	createSystemResp, err  := ApiOperation("POST", papertrailApiSystemsEndpoint, bytes.NewBuffer(b))
+	createSystemResp, err  := apiOperation("POST", papertrailApiSystemsEndpoint, bytes.NewBuffer(b))
 	if err != nil {
 		return nil, err
 	}
@@ -238,7 +257,7 @@ func createPapertrailSystemBasedInIPAddress(ipAddress string) (*System, error){
 	if err != nil {
 		return nil, err
 	}
-	createSystemResp, err  := ApiOperation("POST", papertrailApiSystemsEndpoint, bytes.NewBuffer(b))
+	createSystemResp, err  := apiOperation("POST", papertrailApiSystemsEndpoint, bytes.NewBuffer(b))
 	if err != nil {
 		return nil, err
 	}
@@ -260,7 +279,7 @@ func deletePapertrailSystem(systemId int) (*bool, error){
 	deleted := false
 	systemIdUrl := strings.SplitAfter(papertrailApiSystemsEndpoint, "systems")[0] +
 		"/" + strconv.Itoa(systemId) + strings.SplitAfter(papertrailApiSystemsEndpoint, "systems")[1]
-	deleteSystemResp, err  := ApiOperation("DELETE", systemIdUrl, nil)
+	deleteSystemResp, err  := apiOperation("DELETE", systemIdUrl, nil)
 	if err != nil {
 		return nil, err
 	}
