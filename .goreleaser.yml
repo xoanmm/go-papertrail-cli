@@ -1,0 +1,45 @@
+project_name: go-papertrail-cli
+builds:
+  - id: go-papertrail-cli
+    binary: go-papertrail-cli
+    main: cmd/main.go
+    env:
+      - GO111MODULE=on
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+
+changelog:
+  sort: desc
+
+archives:
+  - format_overrides:
+      - goos: windows
+        format: zip
+    replacements:
+      amd64: 64-bit
+      darwin: macOS
+
+before:
+  hooks:
+    - go mod tidy
+
+release:
+  github:
+    owner: xoanmm
+    name: go-papertrail-cli
+
+nfpms:
+  - id: go-papertrail-cli
+    builds:
+      - go-papertrail-cli
+    formats:
+      - deb
+    vendor: Xoán Mallón
+    homepage: https://github.com/xoanmm/go-papertrail-cli
+    maintainer: xoanmmm <xoanmallon@gmail.com>
+    description: interacts with papertrail through its api to perform both log collection actions and the creation/deletion of systems, groups and saved searches

@@ -19,18 +19,18 @@ type App struct{}
 // PapertrailNecessaryActions interacts with papertrails' API to do the necessary actions
 // in function of the values provided for the options
 func (a *App) PapertrailActions(options *Options) ([]Item, *string, error) {
-	err := checkNecessaryPapertrailConditions(options.Action, options.SystemType, options.IpAddress, options.DestinationId,
-		options.DestinationPort)
+	printActionsToDoMessage(options.Action, options.GroupName, options.SystemWildcard, options.Search, options.Query,
+		options.DeleteAllSearches, options.StartDate, options.EndDate, options.Path)
+	startDateUnix, endDateUnix, err := checkNecessaryPapertrailConditions(options.Action, options.SystemType, options.IpAddress, options.DestinationId,
+		options.DestinationPort, options.StartDate, options.EndDate)
 	if err != nil {
 		return nil, nil, err
 	}
 	actionName := getNameOfAction(options.Action)
-	log.Printf("Checking conditions for %s in papertrail params: " +
-		"[group-name %s] [system-wildcard %s] [search %s] [query %s]\n",
-		actionName, options.GroupName, options.SystemWildcard, options.Search, options.Query)
 	createdOrDeletedItems, action, err := getItems(options.GroupName, options.SystemWildcard, options.DestinationPort,
 		options.DestinationId, options.IpAddress, options.SystemType,
-		options.Search, options.Query, actionName, options.DeleteAllSearches)
+		options.Search, options.Query, actionName, options.DeleteAllSearches,
+		startDateUnix, endDateUnix, options.Path)
 	if err != nil {
 		if createdOrDeletedItems != nil {
 			return *createdOrDeletedItems, action, err
@@ -44,7 +44,7 @@ func (a *App) PapertrailActions(options *Options) ([]Item, *string, error) {
 // them to the list of created items if they have been created
 func getItems(groupName string, systemWildcard string, destinationPort int, destinationId int,
 	ipAddress string, systemType string, searchName string, searchQuery string, actionName string,
-	deleteAll bool) (*[]Item, *string, error) {
+	deleteAll bool, startDate int64, endDate int64, path string) (*[]Item, *string, error) {
 	var papertrailCreatedOrRemovedItems []Item
 	var err error
 	papertrailCreatedOrRemovedItems, err = addSystemElements(systemType, systemWildcard,
@@ -52,7 +52,8 @@ func getItems(groupName string, systemWildcard string, destinationPort int, dest
 	if err != nil {
 		return nil, nil, err
 	}
-	groupAndSearchItems, err := addGroupsAndSearches(groupName, systemWildcard, actionName, searchName, searchQuery, deleteAll)
+	groupAndSearchItems, err := addGroupsAndSearches(groupName, systemWildcard, actionName,
+		searchName, searchQuery, deleteAll, startDate, endDate, path)
 	if err != nil {
 		return &papertrailCreatedOrRemovedItems, &actionName, err
 	}
@@ -63,9 +64,9 @@ func getItems(groupName string, systemWildcard string, destinationPort int, dest
 // addGroupsAndSearches collects the information of items such as
 // groups and papertrail searches created or deleted during execution
 func addGroupsAndSearches(groupName string, systemWildcard string, actionName string, searchName string,
-	searchQuery string, deleteAll bool) ([]Item, error) {
+	searchQuery string, deleteAll bool, startDate int64, endDate int64, path string) ([]Item, error) {
 	var papertrailCreatedItems []Item
-	if actionIsDelete(actionName) {
+	if ActionIsDelete(actionName) {
 		var err error
 		papertrailCreatedItems, err = addGroupAndSearchesDeleted(deleteAll, groupName, actionName,
 		systemWildcard, searchName, searchQuery)
@@ -81,6 +82,14 @@ func addGroupsAndSearches(groupName string, systemWildcard string, actionName st
 		searchItem, err := doPapertrailSearchNecessaryActions(searchName, searchQuery, groupItem.ID, actionName)
 		if err != nil {
 			return nil, err
+		}
+		if ActionIsObtain(actionName) {
+			eventSearchItem, err := doPapertrailEventsSearch(groupName, groupItem.ID, searchName,
+				searchQuery, startDate, endDate, path)
+			if err != nil {
+				return nil, err
+			}
+			papertrailCreatedItems = addItemToCreatedOrDeletedItems(*eventSearchItem, papertrailCreatedItems)
 		}
 		papertrailCreatedItems = addItemToCreatedOrDeletedItems(*searchItem, papertrailCreatedItems)
 	}
@@ -143,15 +152,34 @@ func addSystemElements(systemType string, systemWildcard string, destinationPort
 				if err != nil {
 					return nil, err
 				}
-				papertrailCreatedItems = addItemToCreatedOrDeletedItems(*systemItem, papertrailCreatedItems)
+				if systemItem != nil {
+					papertrailCreatedItems = addItemToCreatedOrDeletedItems(*systemItem, papertrailCreatedItems)
+				}
 			} else if systemTypeIsIpAddress(systemType) {
 				systemItem, err := getSystemInPapertrailBasedInAddressIp(ipAddress, actionName)
 				if err != nil {
 					return nil, err
 				}
-				papertrailCreatedItems = addItemToCreatedOrDeletedItems(*systemItem, papertrailCreatedItems)
+				if systemItem != nil {
+					papertrailCreatedItems = addItemToCreatedOrDeletedItems(*systemItem, papertrailCreatedItems)
+				}
 			}
 		}
 	}
 	return papertrailCreatedItems, nil
+}
+
+func printActionsToDoMessage(actionName string, groupName string, systemWildcard string, search string, query string,
+	deleteAllSearches bool, startDate string, endDate string, path string) {
+	if deleteAllSearches {
+		log.Printf("Checking conditions for do action '%s' in papertrail params: " +
+			"[group-name %s] [system-wildcard %s] [delete-all-searches %t] [--start-date %s] [--end-date %s] [--path %s]\n",
+			actionName, groupName, systemWildcard, deleteAllSearches, startDate, endDate, path)
+	} else {
+		log.Printf("Checking conditions for do action '%s' in papertrail params: " +
+			"[group-name %s] [system-wildcard %s] [search %s] [query %s] " +
+			"[delete-all-searches %t] [--start-date %s] [--end-date %s] [--path %s]\n",
+			actionName, groupName, systemWildcard, search, query,
+			deleteAllSearches, startDate, endDate, path)
+	}
 }

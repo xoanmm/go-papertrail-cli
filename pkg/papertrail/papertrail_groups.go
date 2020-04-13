@@ -23,22 +23,22 @@ func doPapertrailGroupNecessaryActions(groupName string, actionName string, syst
 	}
 	if *groupExists {
 		log.Printf("Group with name %s exists with id %d\n", groupName, groupObject.ID)
-		if actionIsObtain(actionName) || actionIsCreate(actionName) {
+		if ActionIsObtain(actionName) || ActionIsCreate(actionName) {
 			return NewItem(groupObject.ID, "Group", groupName, false, false), nil
-		} else if actionIsDelete(actionName) {
+		} else if ActionIsDelete(actionName) {
 			groupItem, err = deleteGroup(groupObject.ID, groupObject.Name)
 			if err != nil {
 				return nil, err
 			}
 		}
 	} else if !*groupExists {
-		if actionIsCreate(actionName) {
+		if ActionIsCreate(actionName) {
 			groupItem, err = createGroup(groupName, systemWildcard)
 			if err != nil {
 				return nil, err
 			}
 		} else {
-			err := errors.New("Error: Group with name" + groupName + "doesn't exist")
+			err := errors.New("Error: Group with name " + groupName + " doesn't exist ")
 			return nil, err
 		}
 	}
@@ -110,7 +110,7 @@ func createPapertrailGroupOperation(groupName string, systemWildcard string) (*G
 		return &group, nil
 	}
 	log.Printf("Problems creating group with name %s\n", groupName)
-	err = errors.New("Error: Response status code " + strconv.Itoa(createGroupResp.StatusCode))
+	err = convertStatusCodeToError(createGroupResp.StatusCode, "Group", "Creating")
 	return nil, err
 }
 
@@ -130,6 +130,6 @@ func deletePapertrailGroupOperation(groupName string, groupId int) (*bool, error
 		return &deleted, nil
 	}
 	log.Printf("Problems deleting group with id %d\n", groupId)
-	err = errors.New("Error: Response status code " + strconv.Itoa(deleteGroupResp.StatusCode))
+	err = convertStatusCodeToError(deleteGroupResp.StatusCode, "Group", "Deleting")
 	return &deleted, err
 }

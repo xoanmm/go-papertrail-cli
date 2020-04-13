@@ -34,6 +34,15 @@ type Options struct {
 
 	// Indicates if all searches in a group or a specific search are to be deleted
 	DeleteAllSearches bool
+
+	// Filter only from a specific date
+	StartDate string
+
+	// Filter only until a specific date
+	EndDate string
+
+	// Path where to store the logs
+	Path string
 }
 
 type Self struct {
@@ -197,4 +206,51 @@ type SystemToCreateBasedInIpAddress struct {
 
 func NewSystemToCreateBasedInIpAddress(system SystemBasedInIPAddress) *SystemToCreateBasedInIpAddress {
 	return &SystemToCreateBasedInIpAddress{System: system}
+}
+
+type Events struct {
+	ID                string    `json:"id"`
+	SourceIP          string    `json:"source_ip"`
+	Program           string    `json:"program"`
+	Message           string    `json:"message"`
+	ReceivedAt        time.Time `json:"received_at"`
+	GeneratedAt       time.Time `json:"generated_at"`
+	DisplayReceivedAt string    `json:"display_received_at"`
+	SourceID          int64     `json:"source_id"`
+	SourceName        string    `json:"source_name"`
+	Hostname          string    `json:"hostname"`
+	Severity          string    `json:"severity"`
+	Facility          string    `json:"facility"`
+}
+
+type EventsSearch struct {
+	MinID  string `json:"min_id"`
+	MaxID  string `json:"max_id"`
+	Events []Events 			 `json:"events"`
+	Sawmill            bool      `json:"sawmill"`
+	ReachedBeginning   bool      `json:"reached_beginning"`
+	MinTimeAt          time.Time `json:"min_time_at"`
+	ReachedRecordLimit bool      `json:"reached_record_limit"`
+}
+
+type EventsSearchRequestWithMinAndMaxTime struct {
+	GroupID int    `json:"group_id"`
+	Q       string `json:"q"`
+	MinTime string `json:"min_time"`
+	MaxTime string `json:"max_time"`
+}
+
+func NewEventsSearchRequestWithMinAndMaxTime(groupID int, q string, minTime string, maxTime string) *EventsSearchRequestWithMinAndMaxTime {
+	return &EventsSearchRequestWithMinAndMaxTime{GroupID: groupID, Q: q, MinTime: minTime, MaxTime: maxTime}
+}
+
+type EventsSearchRequestWithMinTimeMaxId struct {
+	GroupID int    `json:"group_id"`
+	Q       string `json:"q"`
+	MinTime string `json:"min_time"`
+	MaxId	string	`json:"max_id"`
+}
+
+func NewEventsSearchRequestWithMinTimeMaxId(groupID int, q string, minTime string, maxId string) *EventsSearchRequestWithMinTimeMaxId {
+	return &EventsSearchRequestWithMinTimeMaxId{GroupID: groupID, Q: q, MinTime: minTime, MaxId: maxId}
 }

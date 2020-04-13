@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"strconv"
 )
 
 // checkValidActionsConditions checks if a valid value is being used for the action parameter
@@ -25,21 +26,33 @@ func CheckValidActionsConditions(action string) error {
 // checkNecessaryPapertrailConditions checks if the conditions to provide a token to interact
 // with papertrail are met, as well as that a valid action is provided (c/create, d/delete or o/obtain)
 func checkNecessaryPapertrailConditions(action string, systemType string, ipAddress string,
-	destinationId int, destinationPort int) error {
+	destinationId int, destinationPort int, startDate string, endDate string) (int64, int64, error) {
 	papertrailToken := os.Getenv("PAPERTRAIL_API_TOKEN")
 	if len(papertrailToken) == 0 {
-		return errors.New("Error getting value of PAPERTRAIL_API_TOKEN, " +
+		return 0, 0, errors.New("Error getting value of PAPERTRAIL_API_TOKEN, " +
 			"it's necessary to define this variable with your papertrail's API token ")
 	}
 	err := CheckValidActionsConditions(action)
 	if err != nil {
-		return err
+		return 0, 0, err
 	}
 	err = checkValidSystemTypeConditions(systemType, ipAddress, destinationId, destinationPort, action)
 	if err != nil {
-		return err
+		return 0, 0, err
 	}
-	return nil
+	_, err = CheckDataBoundariesStr(startDate, endDate)
+	if err != nil {
+		return 0, 0, err
+	}
+	startDateUnix, err := GetTimeStampUnixFromDate(startDate)
+	if err != nil {
+		return 0, 0, err
+	}
+	endDateUnix, err := GetTimeStampUnixFromDate(endDate)
+	if err != nil {
+		return 0, 0, err
+	}
+	return startDateUnix, endDateUnix, nil
 }
 
 // apiOperation is a generic function to interact with the papertrail API, in which
@@ -96,7 +109,7 @@ func checkValidSystemTypeConditions(systemType  string, ipAddress string, destin
 		return errors.New("Not valid option provided for system, the only valid values are: \n" +
 			"\t'h' or 'hostname': system based in hostname\n" +
 			"\t'i'or 'ip-address': system based in ip-address\n")
-	} else if !actionIsDelete(actionType) {
+	} else if !ActionIsDelete(actionType) {
 		if systemTypeIsHostname(systemType) {
 			if destinationId != 0 && destinationPort != 0 {
 				return errors.New("If the system is a hostname-type system, only destination " +
@@ -117,7 +130,7 @@ func checkValidSystemTypeConditions(systemType  string, ipAddress string, destin
 }
 
 // actionIsCreate checks if the value entered for the action parameter is to create
-func actionIsCreate(actionOptionName string) bool {
+func ActionIsCreate(actionOptionName string) bool {
 	if actionOptionName == "c" || actionOptionName == "create" {
 		return true
 	}
@@ -125,7 +138,7 @@ func actionIsCreate(actionOptionName string) bool {
 }
 
 // actionIsDelete checks if the value entered for the action parameter is to delete
-func actionIsDelete(actionOptionName string) bool {
+func ActionIsDelete(actionOptionName string) bool {
 	if actionOptionName == "d" || actionOptionName == "delete" {
 		return true
 	}
@@ -133,7 +146,7 @@ func actionIsDelete(actionOptionName string) bool {
 }
 
 // actionIsObtain checks if the value entered for the action parameter is to obtain
-func actionIsObtain(actionOptionName string) bool {
+func ActionIsObtain(actionOptionName string) bool {
 	if actionOptionName == "o" || actionOptionName == "obtain" {
 		return true
 	}
@@ -143,9 +156,9 @@ func actionIsObtain(actionOptionName string) bool {
 // getNameOfAction returns the name of the action to be performed according to the value obtained
 // for the action parameter
 func getNameOfAction(actionOptionName string) string {
-	if actionIsCreate(actionOptionName) {
+	if ActionIsCreate(actionOptionName) {
 		return "create"
-	} else if actionIsDelete(actionOptionName) {
+	} else if ActionIsDelete(actionOptionName) {
 		return "delete"
 	}
 	return "obtain"
@@ -162,12 +175,12 @@ func find(slice []string, val string) (int, bool) {
 	return -1, false
 }
 
-// getOnlyElementsCreatedOrRemoved concatenates to the list of elements created or
+// getOnlyElementsCreatedOrRemovedDistinctEventSearch concatenates to the list of elements created or
 // removed from papertrail those of the provided list, adding only those that
 // fulfill the condition of created or removed to the first list
-func getOnlyElementsCreatedOrRemoved(papertrailToAddItems []Item, createdOrRemovedItems []Item) []Item {
+func getOnlyElementsCreatedOrRemovedDistinctEventSearch(papertrailToAddItems []Item, createdOrRemovedItems []Item) []Item {
 	for _, item := range papertrailToAddItems {
-		if item.Deleted || item.Created {
+		if item.Deleted || item.Created || item.ItemType == "EventsSearch" {
 			createdOrRemovedItems = append(createdOrRemovedItems, item)
 		}
 	}
@@ -177,17 +190,26 @@ func getOnlyElementsCreatedOrRemoved(papertrailToAddItems []Item, createdOrRemov
 // addItemsToCreatedOrDeletedItems checks whether the list of papertrail item has been created
 // or deleted during execution or not, if it has been created/deleted it is added to the list of created items
 func addItemsToCreatedOrDeletedItems(papertrailToAddItems []Item, papertrailItemsCreatedOrDeleted []Item) []Item {
-	return getOnlyElementsCreatedOrRemoved(papertrailToAddItems, papertrailItemsCreatedOrDeleted)
+	return getOnlyElementsCreatedOrRemovedDistinctEventSearch(papertrailToAddItems, papertrailItemsCreatedOrDeleted)
 }
 
 // addItemsToCreatedOrDeletedItems checks whether the papertrail item has been created or deleted during
 // execution or not, if it has been created/deleted it is added to the list of created items
 func addItemToCreatedOrDeletedItems(papertrailToAddItem Item, papertrailItemsCreatedOrDeleted []Item) []Item {
 	var newItems []Item
-	if papertrailToAddItem.Deleted || papertrailToAddItem.Created {
+	if papertrailToAddItem.Deleted || papertrailToAddItem.Created ||
+		papertrailToAddItem.ItemType == "EventsSearch" {
 		newItems = append(papertrailItemsCreatedOrDeleted, papertrailToAddItem)
 	} else {
 		return papertrailItemsCreatedOrDeleted
 	}
 	return newItems
+}
+
+// convertStatusCodeToError converts an error according to the status code provided
+func convertStatusCodeToError(statusCode int, resource string, action string) error {
+	if statusCode == 404 {
+		return errors.New("Error: " + resource + " not found ")
+	}
+	return errors.New("Error: " + action + " " + resource + " Status Code " + strconv.Itoa(statusCode) + " received ")
 }

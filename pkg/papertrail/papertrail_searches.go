@@ -24,16 +24,16 @@ func doPapertrailSearchNecessaryActions(searchName string, searchQuery string, g
 	}
 	if *searchExists {
 		log.Printf("Search with name %s exists with id %d\n", searchName, searchObject.ID)
-		if actionIsObtain(actionName) || actionIsCreate(actionName) {
+		if ActionIsObtain(actionName) || ActionIsCreate(actionName) {
 			return NewItem(searchObject.ID, "Search", searchName, false, false), nil
-		} else if actionIsDelete(actionName) {
+		} else if ActionIsDelete(actionName) {
 			searchItem, err = deleteSearch(searchName, searchObject.ID)
 			if err != nil {
 				return nil, err
 			}
 		}
 	} else if !*searchExists {
-		if actionIsCreate(actionName) {
+		if ActionIsCreate(actionName) {
 			searchItem, err = createSearch(searchName, searchQuery, groupId)
 			if err != nil {
 				return nil, err
@@ -113,7 +113,7 @@ func createPapertrailSearchOperation(searchName string, searchQuery string, grou
 		return &search, nil
 	}
 	log.Printf("Problems creating search with name %s in group with id %d\n", searchName, groupId)
-	err = errors.New("Error: Response status code " + strconv.Itoa(createSearchResp.StatusCode))
+	err = convertStatusCodeToError(createSearchResp.StatusCode, "Search", "Creating")
 	return nil, err
 }
 
@@ -133,6 +133,6 @@ func deletePapertrailSearchOperation(searchName string, searchId int) (*bool, er
 		return &deleted, nil
 	}
 	log.Printf("Problems deleting group with id %d\n", searchId)
-	err = errors.New("Error: Response status code " + strconv.Itoa(deleteSearchResp.StatusCode))
+	err = convertStatusCodeToError(deleteSearchResp.StatusCode, "Search", "Deleting")
 	return &deleted, err
 }

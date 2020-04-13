@@ -2,7 +2,6 @@ package papertrail
 
 import (
 	"encoding/json"
-	"errors"
 	"log"
 	"strconv"
 	"strings"
@@ -28,6 +27,6 @@ func checkIfDestinationExistById(destinationId int) (*bool, *Destination, error)
 		log.Printf("Destination with id %d exists\n", destination.ID)
 		return &exists, destination, nil
 	}
-	err = errors.New("Error: Response status code " + strconv.Itoa(getDestination.StatusCode))
+	err = convertStatusCodeToError(getDestination.StatusCode, "Destination", "Obtaining")
 	return nil, nil, err
 }

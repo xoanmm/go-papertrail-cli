@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/urfave/cli/v2"
 	"github.com/xoanmm/go-papertrail-cli/pkg/papertrail"
 	"log"
 	"os"
@@ -8,12 +9,16 @@ import (
 	"time"
 )
 
+const dateLayout = "01/02/2006 15:04:05"
+
 var version = "1.0.0"
 var date = time.Now().Format(time.RFC3339)
+var now = time.Now().UTC()
+var nowDate = now.Format(dateLayout)
+var nowDateLessEightHours = now.Add(-8 * time.Hour).Format(dateLayout)
 
 func main() {
 	cmd := buildCLI(&papertrail.App{})
-
 	if err := cmd.Run(os.Args); err != nil {
 		log.Fatal(err)
 	}
@@ -24,11 +29,13 @@ func buildCLI(app *papertrail.App) *cli.App {
 	d, _ := time.Parse(time.RFC3339, date)
 	return &cli.App{
 		Name:     "go-papertrail-cli",
-		Usage:    "interacts with papertrail through its api to perform both log collection actions and the creation of systems, groups and saved searches",
+		Usage:    "interacts with papertrail through its api to perform both log collection actions and the creation/deletion of systems, groups and saved searches",
 		Version:  version,
 		Compiled: d,
 		UsageText: "go-papertrail-cli [--group-name <group-name>] [--system-wildcard <wildcard>] " +
-			"[--search <search-name>] [--query <query>]",
+			"[--search <search-name>] [--query <query>] [--action <action>] " +
+			"[--delete-all-searches <delete-all-searches>] [--start-date <start-date>] " +
+			"[--end-date <end-date>] [--path <path>]",
 		Authors: []*cli.Author{
 			{
 				Name:  "Xoan Mallon",
@@ -101,14 +108,38 @@ func buildCLI(app *papertrail.App) *cli.App {
 
 			&cli.BoolFlag{
 				Name: 	 "delete-all-searches",
-				Usage: 	 "Indicates if all searches in a group or a specific search are to be deleted",
+				Usage: 	 "Indicates if all searches in a group or a specific search are going to be deleted",
 				Value:   false,
 				Aliases: []string{"d"},
+			},
+
+			&cli.StringFlag{
+				Name:        "start-date",
+				Usage:       "filter only from a date specified ('mm/dd/yyyy hh:mm:ss' format UTC time)",
+				DefaultText: "$ACTUAL_DATE - 8hours",
+				Value:       nowDateLessEightHours,
+				Aliases:     []string{"s"},
+			},
+
+			&cli.StringFlag{
+				Name:        "end-date",
+				Usage:       "filter only until a date specified ('mm/dd/yyyy hh:mm:ss' format UTC time)",
+				DefaultText: "$ACTUAL_DATE",
+				Value:       nowDate,
+				Aliases:     []string{"e"},
+			},
+
+			&cli.StringFlag{
+				Name:    "path",
+				Usage:   "path where to store the logs",
+				Value:   "/tmp",
+				Aliases: []string{"P"},
 			},
 		},
 		Action: func(c *cli.Context) error {
 			// path, _ := filepath.Abs(c.String("path"))
 			logGroupName := c.String("group-name")
+			actionName := c.String("action")
 
 			papertrailActions, action, err := app.PapertrailActions(&papertrail.Options{
 				GroupName:              logGroupName,
@@ -119,16 +150,29 @@ func buildCLI(app *papertrail.App) *cli.App {
 				SystemType:				c.String("system-type"),
 				Search:					c.String("search"),
 				Query:					c.String("query"),
-				Action:					c.String("action"),
+				Action:					actionName,
 				DeleteAllSearches:		c.Bool("delete-all-searches"),
+				StartDate:               c.String("start-date"),
+				EndDate:                 c.String("end-date"),
+				Path:					c.String("path"),
 			})
+			printFinalResultIfNotErrorsDetected(err, action, papertrailActions)
+			return err
+		},
+	}
+}
+
+func printFinalResultIfNotErrorsDetected(err error, actionName *string, papertrailActions []papertrail.Item) {
+	if err == nil && actionName != nil {
+		if !papertrail.ActionIsObtain(*actionName) {
 			if len(papertrailActions) > 0 {
-				log.Printf("%s actions have been carried out on the following elements\n", strings.Title(*action))
+				log.Printf("%s actions have been carried out on the following elements\n", strings.Title(*actionName))
 				for _, item := range papertrailActions {
 					log.Printf("- %s with ID %d and name '%s'\n", item.ItemType, item.ID, item.ItemName)
 				}
 			}
-			return err
-		},
+		} else {
+			log.Printf("%s saved in file %s", papertrailActions[0].ItemType, papertrailActions[0].ItemName)
+		}
 	}
 }

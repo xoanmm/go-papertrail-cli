@@ -3,7 +3,6 @@ package papertrail
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"log"
 	"strconv"
 	"strings"
@@ -23,9 +22,9 @@ func getSystemInPapertrailBasedInHostname(hostname string, destinationPort int, 
 	var systemItem *Item
 	if (systemExists != nil) && *systemExists {
 		log.Printf("System with hostname %s exists with id %d\n", hostname, systemObject.ID)
-		if actionIsCreate(actionName) {
+		if ActionIsCreate(actionName) {
 			systemItem = NewItem(int(systemObject.ID), "System", systemObject.Name, false, false)
-		} else if actionIsDelete(actionName) {
+		} else if ActionIsDelete(actionName) {
 			deleted, err := deletePapertrailSystem(int(systemObject.ID))
 			if err != nil {
 				return nil, err
@@ -34,20 +33,20 @@ func getSystemInPapertrailBasedInHostname(hostname string, destinationPort int, 
 				systemItem = NewItem(int(systemObject.ID), "System", systemObject.Name, false, *deleted)
 			}
 		}
-	} else if actionIsCreate(actionName){
+	} else if (systemExists != nil) && !*systemExists {
 		log.Printf("System with hostname %s doesn't exist yet\n", hostname)
-		var papertrailSystemCreated *System
-		if destinationPort != 0 {
-			papertrailSystemCreated, err = createPapertrailSystemBasedInHostnameAndDestinationPort(hostname, destinationPort)
-		} else {
-			papertrailSystemCreated, err = createPapertrailSystemBasedInHostnameAndDestinationId(hostname, destinationId)
+		if ActionIsCreate(actionName) {
+			var papertrailSystemCreated *System
+			if destinationPort != 0 {
+				papertrailSystemCreated, err = createPapertrailSystemBasedInHostnameAndDestinationPort(hostname, destinationPort)
+			} else {
+				papertrailSystemCreated, err = createPapertrailSystemBasedInHostnameAndDestinationId(hostname, destinationId)
+			}
+			if err != nil {
+				return nil, err
+			}
+			systemItem = NewItem(int(papertrailSystemCreated.ID), "System", papertrailSystemCreated.Name, true, false)
 		}
-		if err != nil {
-			return nil, err
-		}
-		systemItem = NewItem(int(papertrailSystemCreated.ID), "System", papertrailSystemCreated.Name, true, false)
-	} else if actionIsDelete(actionName) {
-		err = errors.New("Error: System specified doesn't exist ")
 	}
 	return systemItem, err
 }
@@ -61,9 +60,9 @@ func getSystemInPapertrailBasedInAddressIp(addressIP string, actionName string) 
 	var systemItem *Item
 	if (systemExists != nil) && *systemExists {
 		log.Printf("System with IPAddress %s exists with id %d\n", addressIP, systemObject.ID)
-		if actionIsCreate(actionName) || actionIsObtain(actionName) {
+		if ActionIsCreate(actionName) || ActionIsObtain(actionName) {
 			systemItem = NewItem(int(systemObject.ID), "System", systemObject.Name, false, false)
-		} else if actionIsDelete(actionName) {
+		} else if ActionIsDelete(actionName) {
 			deletedSystem, err := deletePapertrailSystem(int(systemObject.ID))
 			if err!= nil {
 				return nil, err
@@ -74,15 +73,12 @@ func getSystemInPapertrailBasedInAddressIp(addressIP string, actionName string) 
 		}
 	} else if (systemExists != nil) && !*systemExists {
 		log.Printf("System with IPAddress %s doesn't exist yet\n", addressIP)
-		if actionIsCreate(actionName) {
+		if ActionIsCreate(actionName) {
 			systemItemCreated, err := createPapertrailSystemBasedInIPAddress(addressIP)
 			if err != nil {
 				return nil, err
 			}
 			systemItem = NewItem(int(systemItemCreated.ID), "System", systemItemCreated.Name, true, false)
-		} else {
-			err := errors.New("Error: System " + addressIP + " doesn't exists yet ")
-			return nil, err
 		}
 	}
 	return systemItem, err
@@ -218,7 +214,7 @@ func createPapertrailSystemBasedInHostnameAndDestinationId(hostname string, dest
 		return &system, nil
 	}
 	log.Printf("Problems creating system with name %s and hostname %s\n", hostname, hostname)
-	err = errors.New("Error: Response status code " + strconv.Itoa(createSystemResp.StatusCode))
+	err = convertStatusCodeToError(createSystemResp.StatusCode, "System", "Creating")
 	return nil, err
 }
 
@@ -242,7 +238,7 @@ func createPapertrailSystemBasedInHostnameAndDestinationPort(hostname string, de
 		return &system, nil
 	}
 	log.Printf("Problems creating system with name %s and hostname%s\n", hostname, hostname)
-	err = errors.New("Error: Response status code " + strconv.Itoa(createSystemResp.StatusCode))
+	err = convertStatusCodeToError(createSystemResp.StatusCode, "System", "Creating")
 	return nil, err
 }
 
@@ -269,12 +265,12 @@ func createPapertrailSystemBasedInIPAddress(ipAddress string) (*System, error){
 		return &system, nil
 	}
 	log.Printf("Problems creating system with name %s and IPAddress %s\n", ipAddress, ipAddress)
-	err = errors.New("Error: Response status code " + strconv.Itoa(createSystemResp.StatusCode))
+	err = convertStatusCodeToError(createSystemResp.StatusCode, "System", "Creating")
 	return nil, err
 }
 
-// deletePapertrailGroup deletes a papertrail group using the groupId
-// provided as the group information to be deleted
+// deletePapertrailSystem deletes a papertrail system using the systemId
+// provided as the system information to be deleted
 func deletePapertrailSystem(systemId int) (*bool, error){
 	deleted := false
 	systemIdUrl := strings.SplitAfter(papertrailApiSystemsEndpoint, "systems")[0] +
@@ -289,6 +285,6 @@ func deletePapertrailSystem(systemId int) (*bool, error){
 		return &deleted, nil
 	}
 	log.Printf("Problems deleting system with id %d\n", systemId)
-	err = errors.New("Error: Response status code " + strconv.Itoa(deleteSystemResp.StatusCode))
+	err = convertStatusCodeToError(deleteSystemResp.StatusCode, "System", "Creating")
 	return &deleted, err
 }

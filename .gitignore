@@ -1,0 +1,11 @@
+# Intellij
+*.idea/
+*.iml
+*.iws
+*.idea*
+
+# Environments
+.env
+env
+env/
+*-env
