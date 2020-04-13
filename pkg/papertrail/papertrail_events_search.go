@@ -13,8 +13,11 @@ import (
 // groups in papertrail API
 const papertrailApiEventsSearchEndpoint = papertrailApiBaseUrl + "events/search.json"
 
+// doPapertrailGroupNecessaryActions is in charge of get the logs
+// on the indicated papertrail search and save it in a file
 func doPapertrailEventsSearch(groupName string, groupId int, searchName string, searchQuery string,
 	startDateUnix int64, endDateUnix int64, path string) (*Item, error) {
+	var getEventsSearchResp *ApiResponse
 	var eventsSearchItem *Item
 	numOfEvents := 0
 	pathFileName := CreateFilenameForEventsSearch(path, groupName, searchName, startDateUnix, endDateUnix)
@@ -23,8 +26,11 @@ func doPapertrailEventsSearch(groupName string, groupId int, searchName string, 
 	if err != nil {
 		return nil, err
 	}
-	getEventsSearchResp, err  := apiOperation("GET", papertrailApiEventsSearchEndpoint, bytes.NewBuffer(b))
-	if getEventsSearchResp.StatusCode == 200 {
+	getEventsSearchResp, err = apiOperation("GET", papertrailApiEventsSearchEndpoint, bytes.NewBuffer(b))
+	if err != nil {
+		return nil, err
+	}
+	if getEventsSearchResp != nil && getEventsSearchResp.StatusCode == 200 {
 		var eventsMessages []string
 		file, err := os.OpenFile(pathFileName, os.O_CREATE|os.O_WRONLY, 0644)
 		defer file.Close()
@@ -49,7 +55,7 @@ func doPapertrailEventsSearch(groupName string, groupId int, searchName string, 
 		if eventsMessages != nil {
 			numOfEvents = len(eventsMessages)
 		}
-		eventsSearchItem = NewItem(0, "EventsSearch", getNameOfFileLogsSaved(pathFileName) + " with " + strconv.Itoa(numOfEvents) + " events retrieved", false, false)
+		eventsSearchItem = NewItem(0, "EventsSearch", getNameOfFileLogsSaved(pathFileName)+" with "+strconv.Itoa(numOfEvents)+" events retrieved", false, false)
 	} else {
 		err := convertStatusCodeToError(getEventsSearchResp.StatusCode, "EventsSearch", "Obtaining")
 		return nil, err
@@ -57,8 +63,10 @@ func doPapertrailEventsSearch(groupName string, groupId int, searchName string, 
 	return eventsSearchItem, nil
 }
 
+// getPapertrailEventsSearchIterations takes care of obtaining events in the specified search
+// when more than one iteration is necessary, since it changes the struct used to send as body
 func getPapertrailEventsSearchIterations(groupId int, searchQuery string, maxId string,
-	startDateUnix int64, eventsMessages []string) ([]string, error){
+	startDateUnix int64, eventsMessages []string) ([]string, error) {
 	var eventsSearchIt EventsSearch
 	for {
 		papertrailEventsSearchIt := NewEventsSearchRequestWithMinTimeMaxId(groupId, searchQuery, maxId, strconv.Itoa(int(startDateUnix)))
@@ -66,7 +74,10 @@ func getPapertrailEventsSearchIterations(groupId int, searchQuery string, maxId 
 		if err != nil {
 			return nil, err
 		}
-		getEventsSearchItResp, err  := apiOperation("GET", papertrailApiEventsSearchEndpoint, bytes.NewBuffer(b))
+		getEventsSearchItResp, err := apiOperation("GET", papertrailApiEventsSearchEndpoint, bytes.NewBuffer(b))
+		if err != nil {
+			return nil, err
+		}
 		json.Unmarshal([]byte(getEventsSearchItResp.Body), &eventsSearchIt)
 		for index := len(eventsSearchIt.Events) - 1; index >= 1; index-- {
 			eventsMessages = append([]string{eventsSearchIt.Events[index].Message}, eventsMessages...)
@@ -79,12 +90,15 @@ func getPapertrailEventsSearchIterations(groupId int, searchQuery string, maxId 
 	return eventsMessages, nil
 }
 
+// saveLogsToFile takes care of saving all events in the specified
+// string slice in the received file as a parameter
 func saveLogsToFile(file os.File, eventsSearch []string) {
 	for _, event := range eventsSearch {
 		file.WriteString(event + "\n")
 	}
 }
 
+// CreateFilenameForEventsSearch creates the name of the file where to save the log events from the received parameters
 func CreateFilenameForEventsSearch(path string, groupName string, searchName string, startDateUnix int64, endDateUnix int64) string {
 	groupNameFixedChars := strings.Replace(groupName, " ", "_", -1)
 	searchNameFixedChars := strings.Replace(searchName, " ", "_", -1)
@@ -95,6 +109,8 @@ func CreateFilenameForEventsSearch(path string, groupName string, searchName str
 	return path + string(filepath.Separator) + groupNameFixedChars + "_" + searchNameFixedChars + "_" + startDateUnixFixedChars + "_" + endDateUnixFixedChars
 }
 
+// getNameOfFileLogsSaved performs the escape of special characters that
+// can cause errors in the file name where the log events will be saved
 func getNameOfFileLogsSaved(pathName string) string {
 	filesPathName := pathName
 	if strings.Contains(filesPathName, "]") {

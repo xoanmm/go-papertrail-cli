@@ -2,6 +2,7 @@ package papertrail
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -10,7 +11,7 @@ import (
 	"strconv"
 )
 
-// checkValidActionsConditions checks if a valid value is being used for the action parameter
+// CheckValidActionsConditions checks if a valid value is being used for the action parameter
 func CheckValidActionsConditions(action string) error {
 	validActions := []string{"c", "create", "o", "obtain", "d", "delete"}
 	_, found := find(validActions, action)
@@ -23,24 +24,24 @@ func CheckValidActionsConditions(action string) error {
 	return nil
 }
 
-// checkNecessaryPapertrailConditions checks if the conditions to provide a token to interact
-// with papertrail are met, as well as that a valid action is provided (c/create, d/delete or o/obtain)
-func checkNecessaryPapertrailConditions(action string, systemType string, ipAddress string,
-	destinationId int, destinationPort int, startDate string, endDate string) (int64, int64, error) {
-	papertrailToken := os.Getenv("PAPERTRAIL_API_TOKEN")
-	if len(papertrailToken) == 0 {
-		return 0, 0, errors.New("Error getting value of PAPERTRAIL_API_TOKEN, " +
-			"it's necessary to define this variable with your papertrail's API token ")
-	}
-	err := CheckValidActionsConditions(action)
+// checkStartdateAndEndDateFormat checks if startDate and endDate complish
+// date format
+func checkStartdateAndEndDateFormat(startDate string, endDate string) error {
+	err := CheckDateFormat(startDate)
 	if err != nil {
-		return 0, 0, err
+		return fmt.Errorf("cannot parse startdate: %v", err)
 	}
-	err = checkValidSystemTypeConditions(systemType, ipAddress, destinationId, destinationPort, action)
+	err = CheckDateFormat(endDate)
 	if err != nil {
-		return 0, 0, err
+		return fmt.Errorf("cannot parse enddate: %v", err)
 	}
-	_, err = CheckDataBoundariesStr(startDate, endDate)
+	return nil
+}
+
+// convertStartDateAndEndDateToUnixFormat converts startDate and endDate
+// parameters from string to unix timestamp in seconds
+func convertStartDateAndEndDateToUnixFormat(startDate string, endDate string) (int64, int64, error) {
+	err := checkStartdateAndEndDateFormat(startDate, endDate)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -55,12 +56,41 @@ func checkNecessaryPapertrailConditions(action string, systemType string, ipAddr
 	return startDateUnix, endDateUnix, nil
 }
 
+// checkNecessaryPapertrailConditions checks if the conditions to provide a token to interact
+// with papertrail are met, as well as that a valid action is provided (c/create, d/delete or o/obtain)
+// and the dates provided are valid
+func checkNecessaryPapertrailConditions(action string, systemType string, ipAddress string,
+	destinationId int, destinationPort int, startDate int64, endDate int64) error {
+	// Token necessary for interact with papertrail is obtained
+	// from environment variable with name PAPERTRAIL_API_TOKEN
+	papertrailToken := os.Getenv("PAPERTRAIL_API_TOKEN")
+	if len(papertrailToken) == 0 {
+		return errors.New("Error getting value of PAPERTRAIL_API_TOKEN, " +
+			"it's necessary to define this variable with your papertrail's API token ")
+	}
+	err := CheckValidActionsConditions(action)
+	if err != nil {
+		return err
+	}
+	err = checkValidSystemTypeConditions(systemType, ipAddress, destinationId, destinationPort, action)
+	if err != nil {
+		return err
+	}
+	if startDate > endDate {
+		return fmt.Errorf("startdate > enddate - please set proper data boundaries")
+	}
+	return nil
+}
+
 // apiOperation is a generic function to interact with the papertrail API, in which
 // a series of headers necessary for the interaction with this API are established.
 // Through the parameters it is possible to indicate the type of operation, the body to be sent
 // and the specific URL of the API
 func apiOperation(method string, url string, bodyToSend io.Reader) (*ApiResponse, error) {
 	req, err := http.NewRequest(method, url, bodyToSend)
+	if err != nil {
+		return nil, err
+	}
 	req.Header.Add(papertrailTokenName, os.Getenv("PAPERTRAIL_API_TOKEN"))
 	req.Header.Add("Content-Type", "application/json")
 	// Send req using http Client
@@ -72,12 +102,12 @@ func apiOperation(method string, url string, bodyToSend io.Reader) (*ApiResponse
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return  nil, err
+		return nil, err
 	}
 	return &ApiResponse{
-		Body:           body,
-		StatusCode: 	resp.StatusCode,
-		err:			err,
+		Body:       body,
+		StatusCode: resp.StatusCode,
+		err:        err,
 	}, nil
 }
 
@@ -101,7 +131,7 @@ func systemTypeIsIpAddress(systemType string) bool {
 
 // checkValidSystemTypeConditions checks that whether ip-address or hostname and system
 // type have been entered, the configuration values on them are valid
-func checkValidSystemTypeConditions(systemType  string, ipAddress string, destinationId int,
+func checkValidSystemTypeConditions(systemType string, ipAddress string, destinationId int,
 	destinationPort int, actionType string) error {
 	validSystemTypes := []string{"h", "hostname", "i", "ip-address"}
 	_, found := find(validSystemTypes, systemType)
@@ -129,7 +159,7 @@ func checkValidSystemTypeConditions(systemType  string, ipAddress string, destin
 	return nil
 }
 
-// actionIsCreate checks if the value entered for the action parameter is to create
+// ActionIsCreate checks if the value entered for the action parameter is to create
 func ActionIsCreate(actionOptionName string) bool {
 	if actionOptionName == "c" || actionOptionName == "create" {
 		return true
@@ -137,7 +167,7 @@ func ActionIsCreate(actionOptionName string) bool {
 	return false
 }
 
-// actionIsDelete checks if the value entered for the action parameter is to delete
+// ActionIsDelete checks if the value entered for the action parameter is to delete
 func ActionIsDelete(actionOptionName string) bool {
 	if actionOptionName == "d" || actionOptionName == "delete" {
 		return true
@@ -145,7 +175,7 @@ func ActionIsDelete(actionOptionName string) bool {
 	return false
 }
 
-// actionIsObtain checks if the value entered for the action parameter is to obtain
+// ActionIsObtain checks if the value entered for the action parameter is to obtain
 func ActionIsObtain(actionOptionName string) bool {
 	if actionOptionName == "o" || actionOptionName == "obtain" {
 		return true

@@ -126,6 +126,14 @@ Examples of implementation for the different actions available are given below:
        --help, -h                          show help (default: false)
        --version, -v                       print the version (default: false)
        
+### Running the tests
+
+Due to being an application with a single entry point, it does not make sense to perform unit tests, but rather [integration tests](./pkg/papertrail/app_test.go) that check that the expected actions are performed based on the input parameters provided.
+
+#### Tests requirements
+
+A series of variables must be provided in order to carry out the execution of the integration tests mentioned, this variable must be stored in a `.env` file within the `pkg/papertrail` folder, a [template](./pkg/papertrail/.template.env) of the variables that this file must follow is available.
+
 ### Dependencies & Refs
 
   - [urfave/cli](https://github.com/urfave/cli)

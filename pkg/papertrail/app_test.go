@@ -12,6 +12,8 @@ import (
 	"testing"
 )
 
+// dateLayout define the layout to use with format
+// mm/dd/yyyy HH:MM:SS
 const dateLayout = "01/02/2006 15:04:05"
 
 var now = time.Now().UTC()
@@ -20,7 +22,9 @@ var nowDateLessEightHours = now.Add(-8 * time.Hour).Format(dateLayout)
 var papertrailApiToken string
 var destinationDefaultId int
 
-func setupEnv() error{
+// setupEnv checks if there is an `.env' file where a series of variables
+// used to perform the integration tests are defined
+func setupEnv() error {
 	// load .env file
 	err := godotenv.Load(".env")
 	if err != nil {
@@ -64,7 +68,7 @@ func TestApp_PapertrailActionsNoProvidedToken(t *testing.T) {
 		"/tmp/",
 	})
 	expectedError := errors.New("Error getting value of PAPERTRAIL_API_TOKEN, it's necessary to define this variable with your papertrail's API token ")
-	if err.Error() != expectedError.Error()  {
+	if err.Error() != expectedError.Error() {
 		t.Fatal("The error obtained is not the expected")
 	}
 }
@@ -92,7 +96,7 @@ func TestApp_PapertrailActionsInvalidHostConfiguration(t *testing.T) {
 		"/tmp/",
 	})
 	expectedError := errors.New("It's necessary provide a value distinct from default (0) to destination id or destination port ")
-	if err.Error() != expectedError.Error()  {
+	if err.Error() != expectedError.Error() {
 		t.Fatal("The error obtained is not the expected")
 	}
 }
@@ -123,7 +127,7 @@ func TestApp_PapertrailActionsInvalidActionConfiguration(t *testing.T) {
 		"\t'c' or 'create': create new system/s, group and/or search\n" +
 		"\t'd' or 'delete': create new system/s, group and/or search\n" +
 		"\t'o'or 'obtain': obtain logs in base of parameters provided\n")
-	if err.Error() != expectedError.Error()  {
+	if err.Error() != expectedError.Error() {
 		t.Fatal("The error obtained is not the expected")
 	}
 }
@@ -153,7 +157,7 @@ func TestApp_PapertrailActionsInvalidSystemProvided(t *testing.T) {
 	expectedError := errors.New("Not valid option provided for system, the only valid values are: \n" +
 		"\t'h' or 'hostname': system based in hostname\n" +
 		"\t'i'or 'ip-address': system based in ip-address\n")
-	if err.Error() != expectedError.Error()  {
+	if err.Error() != expectedError.Error() {
 		t.Fatal("The error obtained is not the expected")
 	}
 }
@@ -182,7 +186,7 @@ func TestApp_PapertrailActionsTwoSystemConfigurationProvided(t *testing.T) {
 	})
 	expectedError := errors.New("If the system is a hostname-type system, only destination " +
 		"id or destination port can be specified\n")
-	if err.Error() != expectedError.Error()  {
+	if err.Error() != expectedError.Error() {
 		t.Fatal("The error obtained is not the expected")
 	}
 }
@@ -211,7 +215,7 @@ func TestApp_PapertrailActionsTwoSystemConfigurationIncorrect(t *testing.T) {
 	})
 	expectedError := errors.New("It's necessary provide a value distinct from default (0) to " +
 		"destination id or destination port ")
-	if err.Error() != expectedError.Error()  {
+	if err.Error() != expectedError.Error() {
 		t.Fatal("The error obtained is not the expected")
 	}
 }
@@ -239,7 +243,7 @@ func TestApp_PapertrailActionsInvalidIpAddressConfiguration(t *testing.T) {
 		"/tmp/",
 	})
 	expectedError := errors.New("The IP Address provided, 11111111 it's not a valid IP Address ")
-	if err.Error() != expectedError.Error()  {
+	if err.Error() != expectedError.Error() {
 		t.Fatal("The error obtained is not the expected")
 	}
 }
@@ -285,7 +289,7 @@ func testDeleteSystemsHostnameDestinationPortGroupAndSearchs(t *testing.T, optio
 		*expectedDeletedSearch,
 		*expectedDeletedGroup,
 	}
-	if !(EqualSlices(deletedItems, itemsDeletedExpected)){
+	if !(EqualSlices(deletedItems, itemsDeletedExpected)) {
 		log.Fatal("Items deleted are not equal to expected")
 	}
 }
@@ -317,7 +321,7 @@ func TestApp_PapertrailActionsCreateSystemsHostnameDestinationPortGroupAndSearch
 	if !(itemEqualWithoutId(createdItems[0], *expectedCreatedSystem1) &&
 		itemEqualWithoutId(createdItems[1], *expectedCreatedSystem2) &&
 		itemEqualWithoutId(createdItems[2], *expectedCreatedGroup) &&
-		itemEqualWithoutId(createdItems[3], *expectedCreatedSearch)){
+		itemEqualWithoutId(createdItems[3], *expectedCreatedSearch)) {
 		log.Fatal("Items created are not equal to expected (without comparing id)")
 	}
 	if err != nil {
@@ -352,7 +356,7 @@ func TestApp_PapertrailActionsCreateSystemsHostnameDestinationIdGroupAndSearchs(
 	if !(itemEqualWithoutId(createdItems[0], *expectedCreatedSystem1) &&
 		itemEqualWithoutId(createdItems[1], *expectedCreatedSystem2) &&
 		itemEqualWithoutId(createdItems[2], *expectedCreatedGroup) &&
-		itemEqualWithoutId(createdItems[3], *expectedCreatedSearch)){
+		itemEqualWithoutId(createdItems[3], *expectedCreatedSearch)) {
 		log.Fatal("Items created are not equal to expected (without comparing id)")
 	}
 	if err != nil {
@@ -379,7 +383,7 @@ func testDeleteSystemIpAddressDestinationPortGroupAndSearchs(t *testing.T, optio
 		*expectedDeletedSearch,
 		*expectedDeletedGroup,
 	}
-	if !(EqualSlices(deletedItems, itemsDeletedExpected)){
+	if !(EqualSlices(deletedItems, itemsDeletedExpected)) {
 		log.Fatal("Items deleted are not equal to expected")
 	}
 }
@@ -409,7 +413,7 @@ func TestApp_PapertrailActionsCreateSystemIpAddressDestinationIdGroupAndSearchs(
 	expectedCreatedSearch := NewItem(0, "Search", "default search test", true, false)
 	if !(itemEqualWithoutId(createdItems[0], *expectedCreatedSystem1) &&
 		itemEqualWithoutId(createdItems[1], *expectedCreatedGroup) &&
-		itemEqualWithoutId(createdItems[2], *expectedCreatedSearch)){
+		itemEqualWithoutId(createdItems[2], *expectedCreatedSearch)) {
 		log.Fatal("Items created are not equal to expected (without comparing id)")
 	}
 	if err != nil {
@@ -462,7 +466,7 @@ func TestApp_PapertrailActionsInvalidadDestinationId(t *testing.T) {
 	}
 	_, _, err := app.PapertrailActions(options)
 	expectedError := errors.New("Error: Destination not found ")
-	if err.Error() != expectedError.Error()  {
+	if err.Error() != expectedError.Error() {
 		t.Fatal("The error obtained is not the expected")
 	}
 }
@@ -484,7 +488,7 @@ func testDeleteSystemsHostnameDestinationPortGroupAndSearchsDeleteAll(t *testing
 		*expectedDeletedSystem,
 		*expectedDeletedGroup,
 	}
-	if !(EqualSlices(deletedItems, itemsDeletedExpected)){
+	if !(EqualSlices(deletedItems, itemsDeletedExpected)) {
 		log.Fatal("Items deleted are not equal to expected")
 	}
 }
@@ -514,7 +518,7 @@ func TestApp_PapertrailActionsCreateRepeatedSystemsHostnameDestinationPortGroupA
 	expectedCreatedSearch := NewItem(0, "Search", "default search test", true, false)
 	if !(itemEqualWithoutId(createdItems[0], *expectedCreatedSystem) &&
 		itemEqualWithoutId(createdItems[1], *expectedCreatedGroup) &&
-		itemEqualWithoutId(createdItems[2], *expectedCreatedSearch)){
+		itemEqualWithoutId(createdItems[2], *expectedCreatedSearch)) {
 		log.Fatal("Items created are not equal to expected (without comparing id)")
 	}
 	if err != nil {
@@ -537,7 +541,7 @@ func testDeleteGroupAndSearchs(t *testing.T, options Options, createdElements []
 		*expectedDeletedSearch,
 		*expectedDeletedGroup,
 	}
-	if !(EqualSlices(deletedItems, itemsDeletedExpected)){
+	if !(EqualSlices(deletedItems, itemsDeletedExpected)) {
 		log.Fatal("Items deleted are not equal to expected")
 	}
 }
@@ -568,7 +572,7 @@ func TestApp_PapertrailActionsDeleteInvalidGroup(t *testing.T) {
 	if !(itemEqualWithoutId(createdItems[0], *expectedCreatedSystem1) &&
 		itemEqualWithoutId(createdItems[1], *expectedCreatedSystem2) &&
 		itemEqualWithoutId(createdItems[2], *expectedCreatedGroup) &&
-		itemEqualWithoutId(createdItems[3], *expectedCreatedSearch)){
+		itemEqualWithoutId(createdItems[3], *expectedCreatedSearch)) {
 		log.Fatal("Items created are not equal to expected (without comparing id)")
 	}
 	if err != nil {
@@ -590,7 +594,7 @@ func TestApp_PapertrailActionsDeleteInvalidGroup(t *testing.T) {
 		*expectedDeletedSystem1,
 		*expectedDeletedSystem2,
 	}
-	if !(EqualSlices(deletedItems, itemsDeletedExpected)){
+	if !(EqualSlices(deletedItems, itemsDeletedExpected)) {
 		log.Fatal("Items deleted are not equal to expected")
 	}
 }
@@ -621,7 +625,7 @@ func TestApp_PapertrailActionsDeleteInvalidSearch(t *testing.T) {
 	if !(itemEqualWithoutId(createdItems[0], *expectedCreatedSystem1) &&
 		itemEqualWithoutId(createdItems[1], *expectedCreatedSystem2) &&
 		itemEqualWithoutId(createdItems[2], *expectedCreatedGroup) &&
-		itemEqualWithoutId(createdItems[3], *expectedCreatedSearch)){
+		itemEqualWithoutId(createdItems[3], *expectedCreatedSearch)) {
 		log.Fatal("Items created are not equal to expected (without comparing id)")
 	}
 	if err != nil {
@@ -643,7 +647,7 @@ func TestApp_PapertrailActionsDeleteInvalidSearch(t *testing.T) {
 		*expectedDeletedSystem1,
 		*expectedDeletedSystem2,
 	}
-	if !(EqualSlices(deletedItems, itemsDeletedExpected)){
+	if !(EqualSlices(deletedItems, itemsDeletedExpected)) {
 		log.Fatal("Items deleted are not equal to expected")
 	}
 }
@@ -687,7 +691,7 @@ func TestApp_PapertrailActionsObtainLogsSystemsHostnameDestinationPortGroupAndSe
 	if !(itemEqualWithoutId(createdItems[0], *expectedCreatedSystem1) &&
 		itemEqualWithoutId(createdItems[1], *expectedCreatedSystem2) &&
 		itemEqualWithoutId(createdItems[2], *expectedCreatedGroup) &&
-		itemEqualWithoutId(createdItems[3], *expectedCreatedSearch)){
+		itemEqualWithoutId(createdItems[3], *expectedCreatedSearch)) {
 		log.Fatal("Items created are not equal to expected (without comparing id)")
 	}
 	if err != nil {
@@ -696,7 +700,7 @@ func TestApp_PapertrailActionsObtainLogsSystemsHostnameDestinationPortGroupAndSe
 	options.Action = "obtain"
 	obtainedItems, _, err := app.PapertrailActions(options)
 	unixStartDate, _ := GetTimeStampUnixFromDate(options.StartDate)
-	unixEndDate , _ := GetTimeStampUnixFromDate(options.EndDate)
+	unixEndDate, _ := GetTimeStampUnixFromDate(options.EndDate)
 	itemExpectedName := CreateFilenameForEventsSearch(options.Path, options.GroupName, options.Search, unixStartDate, unixEndDate) + " with 0 events retrieved"
 	obtainedItemExpected := Item{
 		ID:       0,
@@ -733,8 +737,10 @@ func TestApp_PapertrailActionsObtainIncorrectStartDate(t *testing.T) {
 		"/tmp/",
 	}
 	_, _, err := app.PapertrailActions(options)
-	expectedError := errors.New("cannot parse startdate: parsing time \"" + options.StartDate + "\": month out of range")
-	if err.Error() != expectedError.Error()  {
+	expectedError := fmt.Errorf("cannot parse startdate: parsing time \"%v\": month out of range", options.StartDate)
+	if err.Error() != expectedError.Error() {
+		fmt.Println("err.Error() is", err.Error())
+		fmt.Println("expetected error is", expectedError.Error())
 		t.Fatal("The error obtained is not the expected")
 	}
 }
@@ -758,8 +764,8 @@ func TestApp_PapertrailActionsObtainIncorrectEndDate(t *testing.T) {
 		"/tmp/",
 	}
 	_, _, err := app.PapertrailActions(options)
-	expectedError := errors.New("cannot parse enddate: parsing time \"" + options.EndDate + "\": month out of range")
-	if err.Error() != expectedError.Error()  {
+	expectedError := fmt.Errorf("cannot parse enddate: parsing time \"%v\": month out of range", options.EndDate)
+	if err.Error() != expectedError.Error() {
 		t.Fatal("The error obtained is not the expected")
 	}
 }
@@ -784,7 +790,7 @@ func TestApp_PapertrailActionsObtainIncorrectDates(t *testing.T) {
 	}
 	_, _, err := app.PapertrailActions(options)
 	expectedError := errors.New("startdate > enddate - please set proper data boundaries")
-	if err.Error() != expectedError.Error()  {
+	if err.Error() != expectedError.Error() {
 		t.Fatal("The error obtained is not the expected")
 	}
 }

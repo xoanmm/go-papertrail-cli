@@ -9,6 +9,8 @@ import (
 	"time"
 )
 
+// dateLayout define the layout to use with format
+// mm/dd/yyyy HH:MM:SSx
 const dateLayout = "01/02/2006 15:04:05"
 
 var version = "1.0.0"
@@ -58,57 +60,57 @@ func buildCLI(app *papertrail.App) *cli.App {
 			},
 
 			&cli.IntFlag{
-				Name:	"destination-port",
-				Usage: 	"destination port for sending the logs of the indicated system/s",
-				Value:	0,
+				Name:    "destination-port",
+				Usage:   "destination port for sending the logs of the indicated system/s",
+				Value:   0,
 				Aliases: []string{"p"},
 			},
 
 			&cli.IntFlag{
-				Name:	"destination-id",
-				Usage: 	"destination id for sending the logs of the indicated system/s",
-				Value:	0,
+				Name:    "destination-id",
+				Usage:   "destination id for sending the logs of the indicated system/s",
+				Value:   0,
 				Aliases: []string{"I"},
 			},
 
 			&cli.StringFlag{
-				Name:	"ip-address",
-				Usage: 	"source ip address from sending the logs of the indicated system/s",
-				Value:	"",
+				Name:    "ip-address",
+				Usage:   "source ip address from sending the logs of the indicated system/s",
+				Value:   "",
 				Aliases: []string{"i"},
 			},
 
 			&cli.StringFlag{
 				Name:    "system-type",
-				Usage: 	 "Type of system, can be hostname or ip-address",
+				Usage:   "Type of system, can be hostname or ip-address",
 				Value:   "hostname",
 				Aliases: []string{"t"},
 			},
 
 			&cli.StringFlag{
 				Name:    "search",
-				Usage: 	 "name of saved search to be performed on logs or to be created on a group",
+				Usage:   "name of saved search to be performed on logs or to be created on a group",
 				Value:   "default search",
 				Aliases: []string{"S"},
 			},
 
 			&cli.StringFlag{
-				Name:  "query",
-				Usage: "query to be performed on the group of logs or applied on the search to be created",
-				Value: "*",
+				Name:    "query",
+				Usage:   "query to be performed on the group of logs or applied on the search to be created",
+				Value:   "*",
 				Aliases: []string{"q"},
 			},
 
 			&cli.StringFlag{
-				Name: 	 "action",
-				Usage: 	 "Action to be performed with the information provided for papertrail, possible values only c(create), o(obtain) or d(delete)",
+				Name:    "action",
+				Usage:   "Action to be performed with the information provided for papertrail, possible values only c(create), o(obtain) or d(delete)",
 				Value:   "c",
 				Aliases: []string{"a"},
 			},
 
 			&cli.BoolFlag{
-				Name: 	 "delete-all-searches",
-				Usage: 	 "Indicates if all searches in a group or a specific search are going to be deleted",
+				Name:    "delete-all-searches",
+				Usage:   "Indicates if all searches in a group or a specific search are going to be deleted",
 				Value:   false,
 				Aliases: []string{"d"},
 			},
@@ -142,19 +144,19 @@ func buildCLI(app *papertrail.App) *cli.App {
 			actionName := c.String("action")
 
 			papertrailActions, action, err := app.PapertrailActions(&papertrail.Options{
-				GroupName:              logGroupName,
-				SystemWildcard:			c.String("system-wildcard"),
-				DestinationPort:		c.Int("destination-port"),
-				DestinationId:			c.Int("destination-id"),
-				IpAddress:				c.String("ip-address"),
-				SystemType:				c.String("system-type"),
-				Search:					c.String("search"),
-				Query:					c.String("query"),
-				Action:					actionName,
-				DeleteAllSearches:		c.Bool("delete-all-searches"),
-				StartDate:               c.String("start-date"),
-				EndDate:                 c.String("end-date"),
-				Path:					c.String("path"),
+				GroupName:         logGroupName,
+				SystemWildcard:    c.String("system-wildcard"),
+				DestinationPort:   c.Int("destination-port"),
+				DestinationId:     c.Int("destination-id"),
+				IpAddress:         c.String("ip-address"),
+				SystemType:        c.String("system-type"),
+				Search:            c.String("search"),
+				Query:             c.String("query"),
+				Action:            actionName,
+				DeleteAllSearches: c.Bool("delete-all-searches"),
+				StartDate:         c.String("start-date"),
+				EndDate:           c.String("end-date"),
+				Path:              c.String("path"),
 			})
 			printFinalResultIfNotErrorsDetected(err, action, papertrailActions)
 			return err

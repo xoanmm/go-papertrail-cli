@@ -30,5 +30,5 @@ GLOBAL OPTIONS:
    --path value, -P value              path where to store the logs (default: "/tmp")
    --help, -h                          show help (default: false)
    --version, -v                       print the version (default: false)
- */
+*/
 package main

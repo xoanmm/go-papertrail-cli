@@ -10,7 +10,7 @@ import (
 )
 
 // papertrailApiSearchesEndpoint represents the endpoint for interact with
-// searchs in papertrail API
+// searches in papertrail API
 const papertrailApiSearchesEndpoint = papertrailApiBaseUrl + "searches.json"
 
 // doPapertrailSearchesNecessaryActions is in charge of carrying out the indicated actions
@@ -18,11 +18,11 @@ const papertrailApiSearchesEndpoint = papertrailApiBaseUrl + "searches.json"
 func doPapertrailSearchNecessaryActions(searchName string, searchQuery string, groupId int,
 	actionName string) (*Item, error) {
 	var searchItem *Item
-	searchExists, searchObject, err := checkSearchExists(searchName,searchQuery, groupId)
+	searchObject, err := checkSearchExists(searchName, searchQuery, groupId)
 	if err != nil {
 		return nil, err
 	}
-	if *searchExists {
+	if searchObject != nil {
 		log.Printf("Search with name %s exists with id %d\n", searchName, searchObject.ID)
 		if ActionIsObtain(actionName) || ActionIsCreate(actionName) {
 			return NewItem(searchObject.ID, "Search", searchName, false, false), nil
@@ -32,7 +32,7 @@ func doPapertrailSearchNecessaryActions(searchName string, searchQuery string, g
 				return nil, err
 			}
 		}
-	} else if !*searchExists {
+	} else {
 		if ActionIsCreate(actionName) {
 			searchItem, err = createSearch(searchName, searchQuery, groupId)
 			if err != nil {
@@ -69,41 +69,39 @@ func deleteSearch(searchName string, searchId int) (*Item, error) {
 
 // checkSearchExists checks if a search exists in papertrail specific group, returning the information
 // of this one in case it exists
-func checkSearchExists(searchName string, searchQuery string, groupId int) (*bool, *SearchObject, error) {
-	alreadyExists := false
+func checkSearchExists(searchName string, searchQuery string, groupId int) (*SearchObject, error) {
 	var search *SearchObject
-	getAllSearchesResp, err  := apiOperation("GET", papertrailApiSearchesEndpoint, nil)
+	getAllSearchesResp, err := apiOperation("GET", papertrailApiSearchesEndpoint, nil)
 	if err != nil {
-		return nil, nil, err
+		return search, err
 	}
 	if getAllSearchesResp.StatusCode == 200 {
 		var searches []SearchObject
 		json.Unmarshal([]byte(getAllSearchesResp.Body), &searches)
 		for _, item := range searches {
 			if item.Name == searchName && item.Query == searchQuery && item.Group.ID == groupId {
-				alreadyExists = true
 				search = NewSearchObject(item.ID, item.Name, item.Query, item.Group, item.Links)
 				break
 			}
 		}
 	}
-	return &alreadyExists, search, nil
+	return search, nil
 }
 
 // createPapertrailSearchOperation creates a papertrail search using the parameter information
 // provided as the search information to be created in a specific group
-func createPapertrailSearchOperation(searchName string, searchQuery string, groupId int) (*SearchObject, error){
+func createPapertrailSearchOperation(searchName string, searchQuery string, groupId int) (*SearchObject, error) {
 	var search SearchObject
 	papertrailSearchToCreate := SearchToCreateObject{SearchToCreate: SearchToCreate{
-		Name:           searchName,
-		Query: 			searchQuery,
-		GroupID:		groupId,
+		Name:    searchName,
+		Query:   searchQuery,
+		GroupID: groupId,
 	}}
 	b, err := json.Marshal(papertrailSearchToCreate)
 	if err != nil {
 		return nil, err
 	}
-	createSearchResp, err  := apiOperation("POST", papertrailApiSearchesEndpoint, bytes.NewBuffer(b))
+	createSearchResp, err := apiOperation("POST", papertrailApiSearchesEndpoint, bytes.NewBuffer(b))
 	if err != nil {
 		return nil, err
 	}
@@ -119,11 +117,11 @@ func createPapertrailSearchOperation(searchName string, searchQuery string, grou
 
 // deletePapertrailGroupOperation do the necessary calls in papertrail
 // to delete a search using the parameter information provided as the search information to be deleted
-func deletePapertrailSearchOperation(searchName string, searchId int) (*bool, error){
+func deletePapertrailSearchOperation(searchName string, searchId int) (*bool, error) {
 	deleted := false
 	searchIdUrl := strings.SplitAfter(papertrailApiSearchesEndpoint, "searches")[0] +
 		"/" + strconv.Itoa(searchId) + strings.SplitAfter(papertrailApiSearchesEndpoint, "searches")[1]
-	deleteSearchResp, err  := apiOperation("DELETE", searchIdUrl, nil)
+	deleteSearchResp, err := apiOperation("DELETE", searchIdUrl, nil)
 	if err != nil {
 		return nil, err
 	}
