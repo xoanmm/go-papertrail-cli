@@ -13,7 +13,7 @@ import (
 // mm/dd/yyyy HH:MM:SSx
 const dateLayout = "01/02/2006 15:04:05"
 
-var version = "1.0.0"
+var version = "1.1.0"
 var date = time.Now().Format(time.RFC3339)
 var now = time.Now().UTC()
 var nowDate = now.Format(dateLayout)
@@ -36,8 +36,8 @@ func buildCLI(app *papertrail.App) *cli.App {
 		Compiled: d,
 		UsageText: "go-papertrail-cli [--group-name <group-name>] [--system-wildcard <wildcard>] " +
 			"[--search <search-name>] [--query <query>] [--action <action>] " +
-			"[--delete-all-searches <delete-all-searches>] [--start-date <start-date>] " +
-			"[--end-date <end-date>] [--path <path>]",
+			"[--delete-all-searches <delete-all-searches>] [--delete-all-systems <delete-all-systems>]  " +
+			"[--start-date <start-date>] [--end-date <end-date>] [--path <path>]",
 		Authors: []*cli.Author{
 			{
 				Name:  "Xoan Mallon",
@@ -115,6 +115,19 @@ func buildCLI(app *papertrail.App) *cli.App {
 				Aliases: []string{"d"},
 			},
 
+			&cli.BoolFlag{
+				Name:    "delete-all-systems",
+				Usage:   "Indicates if all systems specified are going to be deleted",
+				Value:   true,
+				Aliases: []string{"D"},
+			},
+
+			&cli.BoolFlag{
+				Name:  "delete-only-systems",
+				Usage: "Indicates if only systems specified are going to be deleted",
+				Value: false,
+			},
+
 			&cli.StringFlag{
 				Name:        "start-date",
 				Usage:       "filter only from a date specified ('mm/dd/yyyy hh:mm:ss' format UTC time)",
@@ -153,6 +166,8 @@ func buildCLI(app *papertrail.App) *cli.App {
 				Search:            c.String("search"),
 				Query:             c.String("query"),
 				Action:            actionName,
+				DeleteAllSystems:  c.Bool("delete-all-systems"),
+				DeleteOnlySystems: c.Bool("delete-only-systems"),
 				DeleteAllSearches: c.Bool("delete-all-searches"),
 				StartDate:         c.String("start-date"),
 				EndDate:           c.String("end-date"),

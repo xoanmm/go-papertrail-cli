@@ -1,12 +1,12 @@
 /*
 NAME:
-   go-papertrail-cli - interacts with papertrail through its api to perform both log collection actions and the creation of systems, groups and saved searches
+   go-papertrail-cli - interacts with papertrail through its api to perform both log collection actions and the creation/deletion of systems, groups and saved searches
 
 USAGE:
-   go-papertrail-cli [--group-name <group-name>] [--system-wildcard <wildcard>] [--search <search-name>] [--query <query>] [--action <action>] [--delete-all-searches <delete-all-searches>] [--startDate <start-date>] [--end-date <end-date>] [--path <path>]
+   go-papertrail-cli [--group-name <group-name>] [--system-wildcard <wildcard>] [--search <search-name>] [--query <query>] [--action <action>] [--delete-all-searches <delete-all-searches>] [--delete-all-systems <delete-all-systems>]  [--start-date <start-date>] [--end-date <end-date>] [--path <path>]
 
 VERSION:
-   1.0.0
+   1.1.0
 
 AUTHOR:
    Xoan Mallon <xoanmallon@gmail.com>
@@ -25,6 +25,8 @@ GLOBAL OPTIONS:
    --query value, -q value             query to be performed on the group of logs or applied on the search to be created (default: "*")
    --action value, -a value            Action to be performed with the information provided for papertrail, possible values only c(create), o(obtain) or d(delete) (default: "c")
    --delete-all-searches, -d           Indicates if all searches in a group or a specific search are going to be deleted (default: false)
+   --delete-all-systems, -D            Indicates if all systems specified are going to be deleted (default: true)
+   --delete-only-systems               Indicates if only systems specified are going to be deleted (default: false)
    --start-date value, -s value        filter only from a date specified ('mm/dd/yyyy hh:mm:ss' format UTC time) (default: $ACTUAL_DATE - 8hours)
    --end-date value, -e value          filter only until a date specified ('mm/dd/yyyy hh:mm:ss' format UTC time) (default: $ACTUAL_DATE)
    --path value, -P value              path where to store the logs (default: "/tmp")

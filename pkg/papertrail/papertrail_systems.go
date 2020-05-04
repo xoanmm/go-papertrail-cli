@@ -38,9 +38,9 @@ func getSystemInPapertrailBasedInHostname(hostname string, destinationPort int, 
 		if ActionIsCreate(actionName) {
 			var papertrailSystemCreated *System
 			if destinationPort != 0 {
-				papertrailSystemCreated, err = createPapertrailSystemBasedInHostnameAndDestinationPort(hostname, destinationPort)
+				papertrailSystemCreated, err = createFromHostnameAndDestinationPort(hostname, destinationPort)
 			} else {
-				papertrailSystemCreated, err = createPapertrailSystemBasedInHostnameAndDestinationId(hostname, destinationId)
+				papertrailSystemCreated, err = createFromHostnameAndDestinationId(hostname, destinationId)
 			}
 			if err != nil {
 				return nil, err
@@ -74,7 +74,7 @@ func getSystemInPapertrailBasedInAddressIp(addressIP string, actionName string) 
 	} else if (systemExists != nil) && !*systemExists {
 		log.Printf("System with IPAddress %s doesn't exist yet\n", addressIP)
 		if ActionIsCreate(actionName) {
-			systemItemCreated, err := createPapertrailSystemBasedInIPAddress(addressIP)
+			systemItemCreated, err := createFromIPAddress(addressIP)
 			if err != nil {
 				return nil, err
 			}
@@ -189,9 +189,9 @@ func SystemToCreateBasedInHostnameAndDestinationPort(hostname string, destinatio
 	}, destinationPort)
 }
 
-// createPapertrailSystemBasedInHostnameAndDestinationId creates a papertrail
+// createFromHostnameAndDestinationId creates a papertrail
 // system using the parameter information provided as the group information to be created
-func createPapertrailSystemBasedInHostnameAndDestinationId(hostname string, destinationId int) (*System, error) {
+func createFromHostnameAndDestinationId(hostname string, destinationId int) (*System, error) {
 	papertrailSystemToCreate := SystemToCreateBasedInHostnameAndDestinationId(hostname, destinationId)
 	b, err := json.Marshal(papertrailSystemToCreate)
 	if err != nil {
@@ -213,9 +213,9 @@ func createPapertrailSystemBasedInHostnameAndDestinationId(hostname string, dest
 	return nil, err
 }
 
-// createPapertrailSystemBasedInHostnameAndDestinationPort creates a papertrail group using the parameter information
+// createFromHostnameAndDestinationPort creates a papertrail group using the parameter information
 // provided as the system information to be created
-func createPapertrailSystemBasedInHostnameAndDestinationPort(hostname string, destinationPort int) (*System, error) {
+func createFromHostnameAndDestinationPort(hostname string, destinationPort int) (*System, error) {
 	papertrailSystemToCreate := SystemToCreateBasedInHostnameAndDestinationPort(hostname, destinationPort)
 	b, err := json.Marshal(papertrailSystemToCreate)
 	if err != nil {
@@ -232,14 +232,14 @@ func createPapertrailSystemBasedInHostnameAndDestinationPort(hostname string, de
 			"created with id %d\n", system.Name, system.Hostname, system.ID)
 		return &system, nil
 	}
-	log.Printf("Problems creating system with name %s and hostname%s\n", hostname, hostname)
+	log.Printf("Problems creating system with name %s and hostname %s\n", hostname, hostname)
 	err = convertStatusCodeToError(createSystemResp.StatusCode, "System", "Creating")
 	return nil, err
 }
 
-// createPapertrailSystemBasedInIPAddress creates a papertrail system using the parameter information
+// createFromIPAddress creates a papertrail system using the parameter information
 // provided as the system information to be created
-func createPapertrailSystemBasedInIPAddress(ipAddress string) (*System, error) {
+func createFromIPAddress(ipAddress string) (*System, error) {
 	papertrailSystemToCreate := NewSystemToCreateBasedInIpAddress(SystemBasedInIPAddress{
 		Name:      ipAddress,
 		IPAddress: ipAddress,

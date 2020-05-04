@@ -15,7 +15,7 @@ const papertrailApiGroupsEndpoint = papertrailApiBaseUrl + "groups.json"
 
 // doPapertrailGroupNecessaryActions is in charge of carrying out the indicated actions
 // on the indicated papertrail group, as well as checking if it exists
-func doPapertrailGroupNecessaryActions(groupName string, actionName string, systemWildcard string) (*Item, error) {
+func doPapertrailGroupNecessaryActions(groupName string, actionName string, systemWildcard string, deleteAllSystems bool) (*Item, error) {
 	var groupItem *Item
 	groupObject, err := checkGroupExists(groupName)
 	if err != nil {
@@ -37,7 +37,7 @@ func doPapertrailGroupNecessaryActions(groupName string, actionName string, syst
 			if err != nil {
 				return nil, err
 			}
-		} else {
+		} else if !checkConditionsForSkipGroupSearch(actionName, deleteAllSystems) {
 			err := errors.New("Error: Group with name " + groupName + " doesn't exist ")
 			return nil, err
 		}

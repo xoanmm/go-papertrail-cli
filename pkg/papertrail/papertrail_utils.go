@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"regexp"
@@ -26,7 +27,7 @@ func CheckValidActionsConditions(action string) error {
 
 // checkStartdateAndEndDateFormat checks if startDate and endDate complish
 // date format
-func checkStartdateAndEndDateFormat(startDate string, endDate string) error {
+func checkStDateEndDateFmt(startDate string, endDate string) error {
 	err := CheckDateFormat(startDate)
 	if err != nil {
 		return fmt.Errorf("cannot parse startdate: %v", err)
@@ -40,8 +41,8 @@ func checkStartdateAndEndDateFormat(startDate string, endDate string) error {
 
 // convertStartDateAndEndDateToUnixFormat converts startDate and endDate
 // parameters from string to unix timestamp in seconds
-func convertStartDateAndEndDateToUnixFormat(startDate string, endDate string) (int64, int64, error) {
-	err := checkStartdateAndEndDateFormat(startDate, endDate)
+func cnvStDateEndDateToUnixTime(startDate string, endDate string) (int64, int64, error) {
+	err := checkStDateEndDateFmt(startDate, endDate)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -56,10 +57,10 @@ func convertStartDateAndEndDateToUnixFormat(startDate string, endDate string) (i
 	return startDateUnix, endDateUnix, nil
 }
 
-// checkNecessaryPapertrailConditions checks if the conditions to provide a token to interact
+// checkNecessaryConditions checks if the conditions to provide a token to interact
 // with papertrail are met, as well as that a valid action is provided (c/create, d/delete or o/obtain)
 // and the dates provided are valid
-func checkNecessaryPapertrailConditions(action string, systemType string, ipAddress string,
+func checkNecessaryConditions(action string, systemType string, ipAddress string,
 	destinationId int, destinationPort int, startDate int64, endDate int64) error {
 	// Token necessary for interact with papertrail is obtained
 	// from environment variable with name PAPERTRAIL_API_TOKEN
@@ -242,4 +243,68 @@ func convertStatusCodeToError(statusCode int, resource string, action string) er
 		return errors.New("Error: " + resource + " not found ")
 	}
 	return errors.New("Error: " + action + " " + resource + " Status Code " + strconv.Itoa(statusCode) + " received ")
+}
+
+// checkConditionsForDeleteAllSystems checks if all papertrail systems should be deleted
+func checkConditionsForDeleteAllSystems(actionName string, deleteAllSystems bool) bool {
+	if !ActionIsDelete(actionName) {
+		return true
+	} else if ActionIsDelete(actionName) && deleteAllSystems {
+		return true
+	}
+	return false
+}
+
+// checkConditionsForSkipGroupSearch check if it is possible to skip obtaining a
+// papertrail group and its searches
+func checkConditionsForSkipGroupSearch(actionName string, deleteAllSystems bool) bool {
+	if ActionIsDelete(actionName) || ActionIsObtain(actionName) && deleteAllSystems {
+		return true
+	}
+	return false
+}
+
+// printMessageActionDelete prints the possible message when the action to perform is delete
+func printMessageActionDelete(options Options) {
+	if options.DeleteOnlySystems {
+		log.Printf("Checking conditions for do action '%s' in papertrail params: "+
+			"[--group-name %s] [--system-wildcard %s] [--delete-all-searches %t] "+
+			"[--delete-all-systems %t] [--delete-only-systems %t]\n",
+			options.Action, options.GroupName, options.SystemWildcard,
+			options.DeleteAllSearches, options.DeleteAllSystems, options.DeleteOnlySystems)
+	} else {
+		log.Printf("Checking conditions for do action '%s' in papertrail params: "+
+			"[--group-name %s] [--system-wildcard %s] [--search %s] [--delete-all-searches %t] "+
+			"[--delete-all-systems %t] [--delete-only-systems %t]\n",
+			options.Action, options.GroupName, options.SystemWildcard, options.Search,
+			options.DeleteAllSearches, options.DeleteAllSystems, options.DeleteOnlySystems)
+	}
+}
+
+// printMessageActionCreate prints the possible message when the action to perform is create
+func printMessageActionCreate(options Options) {
+	if options.DestinationId != 0 {
+		log.Printf("Checking conditions for do action '%s' in papertrail params: "+
+			"[--group-name %s] [--system-wildcard %s] [--destination-id %d] [--search %s] [--query %s]\n",
+			options.Action, options.GroupName, options.SystemWildcard, options.DestinationId,
+			options.Search, options.Query)
+	} else if options.DestinationPort != 0 {
+		log.Printf("Checking conditions for do action '%s' in papertrail params: "+
+			"[--group-name %s] [--system-wildcard %s] [--destination-port %d] [--search %s] [--query %s]\n",
+			options.Action, options.GroupName, options.SystemWildcard, options.DestinationPort,
+			options.Search, options.Query)
+	} else {
+		log.Printf("Checking conditions for do action '%s' in papertrail params: "+
+			"[--group-name %s] [--system-wildcard %s] [--search %s] [--query %s]\n",
+			options.Action, options.GroupName, options.SystemWildcard, options.Search, options.Query)
+	}
+}
+
+// printMessageActionObtain prints the possible message when the action to perform is obtain
+func printMessageActionObtain(options Options) {
+	log.Printf("Checking conditions for do action '%s' in papertrail params: "+
+		"[--group-name %s] [--system-wildcard %s] [--search %s] [--query %s] "+
+		"[--start-date %s] [--end-date %s] [--path %s]\n",
+		options.Action, options.GroupName, options.SystemWildcard, options.Search,
+		options.Query, options.StartDate, options.EndDate, options.Path)
 }

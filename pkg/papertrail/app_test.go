@@ -63,6 +63,8 @@ func TestApp_PapertrailActionsNoProvidedToken(t *testing.T) {
 		"*",
 		"c",
 		false,
+		true,
+		false,
 		nowDateLessEightHours,
 		nowDate,
 		"/tmp/",
@@ -78,7 +80,7 @@ func TestApp_PapertrailActionsInvalidHostConfiguration(t *testing.T) {
 	app := &App{}
 	errT := os.Setenv("PAPERTRAIL_API_TOKEN", "tokenPapertrail")
 	if errT != nil {
-		fmt.Println("errT is", errT)
+		log.Fatal(errT)
 	}
 	_, _, err := app.PapertrailActions(&Options{
 		"group-name",
@@ -90,6 +92,8 @@ func TestApp_PapertrailActionsInvalidHostConfiguration(t *testing.T) {
 		"default search",
 		"*",
 		"c",
+		false,
+		true,
 		false,
 		nowDateLessEightHours,
 		nowDate,
@@ -106,7 +110,7 @@ func TestApp_PapertrailActionsInvalidActionConfiguration(t *testing.T) {
 	app := &App{}
 	errT := os.Setenv("PAPERTRAIL_API_TOKEN", "tokenPapertrail")
 	if errT != nil {
-		fmt.Println("errT is", errT)
+		log.Fatal(errT)
 	}
 	_, _, err := app.PapertrailActions(&Options{
 		"group-name",
@@ -118,6 +122,8 @@ func TestApp_PapertrailActionsInvalidActionConfiguration(t *testing.T) {
 		"default search",
 		"*",
 		"ddd",
+		false,
+		true,
 		false,
 		nowDateLessEightHours,
 		nowDate,
@@ -137,7 +143,7 @@ func TestApp_PapertrailActionsInvalidSystemProvided(t *testing.T) {
 	app := &App{}
 	errT := os.Setenv("PAPERTRAIL_API_TOKEN", "tokenPapertrail")
 	if errT != nil {
-		fmt.Println("errT is", errT)
+		log.Fatal(errT)
 	}
 	_, _, err := app.PapertrailActions(&Options{
 		"group-name",
@@ -149,6 +155,8 @@ func TestApp_PapertrailActionsInvalidSystemProvided(t *testing.T) {
 		"default search",
 		"*",
 		"c",
+		false,
+		true,
 		false,
 		nowDateLessEightHours,
 		nowDate,
@@ -167,7 +175,7 @@ func TestApp_PapertrailActionsTwoSystemConfigurationProvided(t *testing.T) {
 	app := &App{}
 	errT := os.Setenv("PAPERTRAIL_API_TOKEN", "tokenPapertrail")
 	if errT != nil {
-		fmt.Println("errT is", errT)
+		log.Fatal(errT)
 	}
 	_, _, err := app.PapertrailActions(&Options{
 		"group-name",
@@ -179,6 +187,8 @@ func TestApp_PapertrailActionsTwoSystemConfigurationProvided(t *testing.T) {
 		"default search",
 		"*",
 		"c",
+		false,
+		true,
 		false,
 		nowDateLessEightHours,
 		nowDate,
@@ -196,7 +206,7 @@ func TestApp_PapertrailActionsTwoSystemConfigurationIncorrect(t *testing.T) {
 	app := &App{}
 	errT := os.Setenv("PAPERTRAIL_API_TOKEN", "tokenPapertrail")
 	if errT != nil {
-		fmt.Println("errT is", errT)
+		log.Fatal(errT)
 	}
 	_, _, err := app.PapertrailActions(&Options{
 		"group-name",
@@ -208,6 +218,8 @@ func TestApp_PapertrailActionsTwoSystemConfigurationIncorrect(t *testing.T) {
 		"default search",
 		"*",
 		"c",
+		false,
+		true,
 		false,
 		nowDateLessEightHours,
 		nowDate,
@@ -225,7 +237,7 @@ func TestApp_PapertrailActionsInvalidIpAddressConfiguration(t *testing.T) {
 	app := &App{}
 	errT := os.Setenv("PAPERTRAIL_API_TOKEN", "tokenPapertrail")
 	if errT != nil {
-		fmt.Println("errT is", errT)
+		log.Fatal(errT)
 	}
 	_, _, err := app.PapertrailActions(&Options{
 		"group-name",
@@ -237,6 +249,8 @@ func TestApp_PapertrailActionsInvalidIpAddressConfiguration(t *testing.T) {
 		"default search",
 		"*",
 		"c",
+		false,
+		true,
 		false,
 		nowDateLessEightHours,
 		nowDate,
@@ -268,7 +282,9 @@ func EqualSlices(a, b []Item) bool {
 	return true
 }
 
-func testDeleteSystemsHostnameDestinationPortGroupAndSearchs(t *testing.T, options Options, createdElements []Item) {
+func testDeleteOnlySystemsHostnameDestinationPort(t *testing.T, options Options, createdElements []Item) {
+	options.DeleteAllSystems = true
+	options.DeleteAllSearches = true
 	options.Action = "delete"
 	app := &App{}
 	deletedItems, _, err := app.PapertrailActions(&options)
@@ -279,15 +295,52 @@ func testDeleteSystemsHostnameDestinationPortGroupAndSearchs(t *testing.T, optio
 		createdElements[0].ItemName, false, true)
 	expectedDeletedSystem2 := NewItem(createdElements[1].ID, createdElements[1].ItemType,
 		createdElements[1].ItemName, false, true)
-	expectedDeletedSearch := NewItem(createdElements[3].ID, createdElements[3].ItemType,
-		createdElements[3].ItemName, false, true)
+	itemsDeletedExpected := []Item{
+		*expectedDeletedSystem1,
+		*expectedDeletedSystem2,
+	}
+	if !(EqualSlices(deletedItems, itemsDeletedExpected)) {
+		log.Fatal("Items deleted are not equal to expected")
+	}
+}
+
+func testDeleteSystemsHostnameDestinationPortGroupAndAllSearchs(t *testing.T, options Options, createdElements []Item) {
+	options.DeleteAllSystems = true
+	options.DeleteAllSearches = true
+	options.Action = "delete"
+	app := &App{}
+	deletedItems, _, err := app.PapertrailActions(&options)
+	if err != nil {
+		log.Fatal(err)
+	}
+	expectedDeletedSystem1 := NewItem(createdElements[0].ID, createdElements[0].ItemType,
+		createdElements[0].ItemName, false, true)
+	expectedDeletedSystem2 := NewItem(createdElements[1].ID, createdElements[1].ItemType,
+		createdElements[1].ItemName, false, true)
 	expectedDeletedGroup := NewItem(createdElements[2].ID, createdElements[2].ItemType,
 		createdElements[2].ItemName, false, true)
 	itemsDeletedExpected := []Item{
 		*expectedDeletedSystem1,
 		*expectedDeletedSystem2,
-		*expectedDeletedSearch,
 		*expectedDeletedGroup,
+	}
+	if !(EqualSlices(deletedItems, itemsDeletedExpected)) {
+		log.Fatal("Items deleted are not equal to expected")
+	}
+}
+
+func testDeleteSystemsHostnameDestinationPortGroupAndSearchsOnlySearchs(t *testing.T, options Options, createdElements []Item) {
+	options.Action = "delete"
+	options.DeleteAllSystems = false
+	app := &App{}
+	deletedItems, _, err := app.PapertrailActions(&options)
+	if err != nil {
+		log.Fatal(err)
+	}
+	expectedDeletedSearch := NewItem(createdElements[3].ID, createdElements[3].ItemType,
+		createdElements[3].ItemName, false, true)
+	itemsDeletedExpected := []Item{
+		*expectedDeletedSearch,
 	}
 	if !(EqualSlices(deletedItems, itemsDeletedExpected)) {
 		log.Fatal("Items deleted are not equal to expected")
@@ -308,12 +361,15 @@ func TestApp_PapertrailActionsCreateSystemsHostnameDestinationPortGroupAndSearch
 		"*",
 		"c",
 		false,
+		true,
+		false,
 		nowDateLessEightHours,
 		nowDate,
 		"/tmp/",
 	}
 	createdItems, _, err := app.PapertrailActions(options)
-	defer testDeleteSystemsHostnameDestinationPortGroupAndSearchs(t, *options, createdItems)
+	defer testDeleteSystemsHostnameDestinationPortGroupAndAllSearchs(t, *options, createdItems)
+	defer testDeleteSystemsHostnameDestinationPortGroupAndSearchsOnlySearchs(t, *options, createdItems)
 	expectedCreatedSystem1 := NewItem(0, "System", "15.21.10.1", true, false)
 	expectedCreatedSystem2 := NewItem(0, "System", "3.2.13.90", true, false)
 	expectedCreatedGroup := NewItem(0, "Group", "group-test", true, false)
@@ -342,13 +398,15 @@ func TestApp_PapertrailActionsCreateSystemsHostnameDestinationIdGroupAndSearchs(
 		"default search test",
 		"*",
 		"c",
+		true,
+		true,
 		false,
 		nowDateLessEightHours,
 		nowDate,
 		"/tmp/",
 	}
 	createdItems, _, err := app.PapertrailActions(options)
-	defer testDeleteSystemsHostnameDestinationPortGroupAndSearchs(t, *options, createdItems)
+	defer testDeleteSystemsHostnameDestinationPortGroupAndAllSearchs(t, *options, createdItems)
 	expectedCreatedSystem1 := NewItem(0, "System", "15.21.10.1", true, false)
 	expectedCreatedSystem2 := NewItem(0, "System", "3.2.13.90", true, false)
 	expectedCreatedGroup := NewItem(0, "Group", "group-test", true, false)
@@ -364,9 +422,67 @@ func TestApp_PapertrailActionsCreateSystemsHostnameDestinationIdGroupAndSearchs(
 	}
 }
 
-func testDeleteSystemIpAddressDestinationPortGroupAndSearchs(t *testing.T, options Options,
+func testDeleteOnlySystemIpAddressDestinationPort(t *testing.T, options Options,
 	createdElements []Item) {
 	options.Action = "delete"
+	options.DeleteAllSystems = true
+	app := &App{}
+	deletedItems, _, err := app.PapertrailActions(&options)
+	if err != nil {
+		log.Fatal(err)
+	}
+	expectedDeletedSystem1 := NewItem(createdElements[0].ID, createdElements[0].ItemType,
+		createdElements[0].ItemName, false, true)
+	itemsDeletedExpected := []Item{
+		*expectedDeletedSystem1,
+	}
+	if !(EqualSlices(deletedItems, itemsDeletedExpected)) {
+		log.Fatal("Items deleted are not equal to expected")
+	}
+}
+
+func TestApp_PapertrailActionsCreateSystemIpAddressDestinationIdGroupAndSearchsWithoutSystems(t *testing.T) {
+	defer os.Setenv("PAPERTRAIL_API_TOKEN", papertrailApiToken)
+	app := &App{}
+	options := &Options{
+		"group-test",
+		"15.21.10.1",
+		0,
+		0,
+		"15.21.10.1",
+		"ip-address",
+		"default search test",
+		"*",
+		"c",
+		false,
+		false,
+		false,
+		nowDateLessEightHours,
+		nowDate,
+		"/tmp/",
+	}
+	createdItems, _, err := app.PapertrailActions(options)
+	defer testDeleteOnlySystemIpAddressDestinationPort(t, *options, createdItems)
+	defer testDeleteGroupAndSearchsWithSystemBasedInDestinationPort(t, *options, createdItems)
+	defer testDeleteOnlySearchsWithSystemBasedInDestinationPort(t, *options, createdItems)
+	expectedCreatedSystem1 := NewItem(0, "System", "15.21.10.1", true, false)
+	expectedCreatedGroup := NewItem(0, "Group", "group-test", true, false)
+	expectedCreatedSearch := NewItem(0, "Search", "default search test", true, false)
+	if !(itemEqualWithoutId(createdItems[0], *expectedCreatedSystem1) &&
+		itemEqualWithoutId(createdItems[1], *expectedCreatedGroup) &&
+		itemEqualWithoutId(createdItems[2], *expectedCreatedSearch)) {
+		log.Fatal("Items created are not equal to expected (without comparing id)")
+	}
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func testDeleteSystemIpAddressDestinationPortGroupSearchsAndSystems(t *testing.T, options Options,
+	createdElements []Item) {
+	options.Action = "delete"
+	options.DeleteAllSearches = true
+	options.DeleteAllSystems = true
 	app := &App{}
 	deletedItems, _, err := app.PapertrailActions(&options)
 	if err != nil {
@@ -374,13 +490,10 @@ func testDeleteSystemIpAddressDestinationPortGroupAndSearchs(t *testing.T, optio
 	}
 	expectedDeletedSystem := NewItem(createdElements[0].ID, createdElements[0].ItemType,
 		createdElements[0].ItemName, false, true)
-	expectedDeletedSearch := NewItem(createdElements[2].ID, createdElements[2].ItemType,
-		createdElements[2].ItemName, false, true)
 	expectedDeletedGroup := NewItem(createdElements[1].ID, createdElements[1].ItemType,
 		createdElements[1].ItemName, false, true)
 	itemsDeletedExpected := []Item{
 		*expectedDeletedSystem,
-		*expectedDeletedSearch,
 		*expectedDeletedGroup,
 	}
 	if !(EqualSlices(deletedItems, itemsDeletedExpected)) {
@@ -401,13 +514,15 @@ func TestApp_PapertrailActionsCreateSystemIpAddressDestinationIdGroupAndSearchs(
 		"default search test",
 		"*",
 		"c",
+		true,
+		true,
 		false,
 		nowDateLessEightHours,
 		nowDate,
 		"/tmp/",
 	}
 	createdItems, _, err := app.PapertrailActions(options)
-	defer testDeleteSystemIpAddressDestinationPortGroupAndSearchs(t, *options, createdItems)
+	defer testDeleteSystemIpAddressDestinationPortGroupSearchsAndSystems(t, *options, createdItems)
 	expectedCreatedSystem1 := NewItem(0, "System", "15.21.10.1", true, false)
 	expectedCreatedGroup := NewItem(0, "Group", "group-test", true, false)
 	expectedCreatedSearch := NewItem(0, "Search", "default search test", true, false)
@@ -435,6 +550,8 @@ func TestApp_PapertrailActionsCreateSystemIpAddressInvalid(t *testing.T) {
 		"*",
 		"c",
 		false,
+		true,
+		false,
 		nowDateLessEightHours,
 		nowDate,
 		"/tmp/",
@@ -459,6 +576,8 @@ func TestApp_PapertrailActionsInvalidadDestinationId(t *testing.T) {
 		"default search test",
 		"*",
 		"c",
+		false,
+		true,
 		false,
 		nowDateLessEightHours,
 		nowDate,
@@ -507,6 +626,8 @@ func TestApp_PapertrailActionsCreateRepeatedSystemsHostnameDestinationPortGroupA
 		"*",
 		"c",
 		false,
+		true,
+		false,
 		nowDateLessEightHours,
 		nowDate,
 		"/tmp/",
@@ -526,19 +647,55 @@ func TestApp_PapertrailActionsCreateRepeatedSystemsHostnameDestinationPortGroupA
 	}
 }
 
-func testDeleteGroupAndSearchs(t *testing.T, options Options, createdElements []Item) {
+func testDeleteOnlySearchsWithSystemBasedInDestinationPort(t *testing.T, options Options, createdElements []Item) {
+	options.DeleteAllSystems = false
 	options.Action = "delete"
 	app := &App{}
 	deletedItems, _, err := app.PapertrailActions(&options)
 	if err != nil {
 		log.Fatal(err)
 	}
-	expectedDeletedSearch := NewItem(createdElements[3].ID, createdElements[3].ItemType,
-		createdElements[3].ItemName, false, true)
-	expectedDeletedGroup := NewItem(createdElements[2].ID, createdElements[2].ItemType,
+	expectedDeletedSearch := NewItem(createdElements[2].ID, createdElements[2].ItemType,
 		createdElements[2].ItemName, false, true)
 	itemsDeletedExpected := []Item{
 		*expectedDeletedSearch,
+	}
+	if !(EqualSlices(deletedItems, itemsDeletedExpected)) {
+		log.Fatal("Items deleted are not equal to expected")
+	}
+}
+
+func testDeleteGroupAndSearchsWithSystemBasedInDestinationPort(t *testing.T, options Options, createdElements []Item) {
+	options.DeleteAllSystems = false
+	options.DeleteAllSearches = true
+	options.Action = "delete"
+	app := &App{}
+	deletedItems, _, err := app.PapertrailActions(&options)
+	if err != nil {
+		log.Fatal(err)
+	}
+	expectedDeletedSearch := NewItem(createdElements[1].ID, createdElements[1].ItemType,
+		createdElements[1].ItemName, false, true)
+	itemsDeletedExpected := []Item{
+		*expectedDeletedSearch,
+	}
+	if !(EqualSlices(deletedItems, itemsDeletedExpected)) {
+		log.Fatal("Items deleted are not equal to expected")
+	}
+}
+
+func testDeleteGroupAndSearchsWithoutSystems(t *testing.T, options Options, createdElements []Item) {
+	options.DeleteAllSystems = false
+	options.DeleteAllSearches = true
+	options.Action = "delete"
+	app := &App{}
+	deletedItems, _, err := app.PapertrailActions(&options)
+	if err != nil {
+		log.Fatal(err)
+	}
+	expectedDeletedGroup := NewItem(createdElements[2].ID, createdElements[2].ItemType,
+		createdElements[2].ItemName, false, true)
+	itemsDeletedExpected := []Item{
 		*expectedDeletedGroup,
 	}
 	if !(EqualSlices(deletedItems, itemsDeletedExpected)) {
@@ -560,6 +717,8 @@ func TestApp_PapertrailActionsDeleteInvalidGroup(t *testing.T) {
 		"*",
 		"c",
 		false,
+		false,
+		false,
 		nowDateLessEightHours,
 		nowDate,
 		"/tmp/",
@@ -578,7 +737,9 @@ func TestApp_PapertrailActionsDeleteInvalidGroup(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer testDeleteGroupAndSearchs(t, *options, createdItems)
+	defer testDeleteOnlySystemsHostnameDestinationPort(t, *options, createdItems)
+	defer testDeleteGroupAndSearchsWithoutSystems(t, *options, createdItems)
+	options.DeleteAllSystems = false
 	options.Action = "delete"
 	options.GroupName = "group-test invalid"
 	deletedItems, _, err := app.PapertrailActions(options)
@@ -586,6 +747,49 @@ func TestApp_PapertrailActionsDeleteInvalidGroup(t *testing.T) {
 	if err.Error() != errExpected.Error() {
 		t.Fatal("The error obtained is not the expected")
 	}
+	if len(deletedItems) > 0 {
+		t.Fatal("The list of deleted items should not be greater than 0")
+	}
+}
+
+func TestApp_PapertrailActionsDeleteOnlySystems(t *testing.T) {
+	defer os.Setenv("PAPERTRAIL_API_TOKEN", papertrailApiToken)
+	app := &App{}
+	options := &Options{
+		"group-test",
+		"15.21.10.1, 3.2.13.90",
+		23633,
+		0,
+		"",
+		"hostname",
+		"default search test",
+		"*",
+		"c",
+		false,
+		true,
+		false,
+		nowDateLessEightHours,
+		nowDate,
+		"/tmp/",
+	}
+	createdItems, _, err := app.PapertrailActions(options)
+	expectedCreatedSystem1 := NewItem(0, "System", "15.21.10.1", true, false)
+	expectedCreatedSystem2 := NewItem(0, "System", "3.2.13.90", true, false)
+	expectedCreatedGroup := NewItem(0, "Group", "group-test", true, false)
+	expectedCreatedSearch := NewItem(0, "Search", "default search test", true, false)
+	if !(itemEqualWithoutId(createdItems[0], *expectedCreatedSystem1) &&
+		itemEqualWithoutId(createdItems[1], *expectedCreatedSystem2) &&
+		itemEqualWithoutId(createdItems[2], *expectedCreatedGroup) &&
+		itemEqualWithoutId(createdItems[3], *expectedCreatedSearch)) {
+		log.Fatal("Items created are not equal to expected (without comparing id)")
+	}
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer testDeleteGroupAndSearchsWithoutSystems(t, *options, createdItems)
+	options.Action = "delete"
+	options.DeleteOnlySystems = true
+	deletedItems, _, _ := app.PapertrailActions(options)
 	expectedDeletedSystem1 := NewItem(createdItems[0].ID, createdItems[0].ItemType,
 		createdItems[0].ItemName, false, true)
 	expectedDeletedSystem2 := NewItem(createdItems[1].ID, createdItems[1].ItemType,
@@ -613,6 +817,8 @@ func TestApp_PapertrailActionsDeleteInvalidSearch(t *testing.T) {
 		"*",
 		"c",
 		false,
+		true,
+		false,
 		nowDateLessEightHours,
 		nowDate,
 		"/tmp/",
@@ -631,7 +837,7 @@ func TestApp_PapertrailActionsDeleteInvalidSearch(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer testDeleteGroupAndSearchs(t, *options, createdItems)
+	defer testDeleteGroupAndSearchsWithoutSystems(t, *options, createdItems)
 	options.Action = "delete"
 	options.Search = "default search invalid"
 	deletedItems, _, err := app.PapertrailActions(options)
@@ -678,12 +884,14 @@ func TestApp_PapertrailActionsObtainLogsSystemsHostnameDestinationPortGroupAndSe
 		"*",
 		"c",
 		false,
+		true,
+		false,
 		nowDateLessEightHours,
 		nowDate,
 		"/tmp/",
 	}
 	createdItems, _, err := app.PapertrailActions(options)
-	defer testDeleteSystemsHostnameDestinationPortGroupAndSearchs(t, *options, createdItems)
+	defer testDeleteSystemsHostnameDestinationPortGroupAndAllSearchs(t, *options, createdItems)
 	expectedCreatedSystem1 := NewItem(0, "System", "15.21.10.1", true, false)
 	expectedCreatedSystem2 := NewItem(0, "System", "3.2.13.90", true, false)
 	expectedCreatedGroup := NewItem(0, "Group", "group-test", true, false)
@@ -732,6 +940,8 @@ func TestApp_PapertrailActionsObtainIncorrectStartDate(t *testing.T) {
 		"*",
 		"o",
 		false,
+		true,
+		false,
 		"14/08/2020 10:20:00",
 		"04/08/2020 10:40:00",
 		"/tmp/",
@@ -739,8 +949,6 @@ func TestApp_PapertrailActionsObtainIncorrectStartDate(t *testing.T) {
 	_, _, err := app.PapertrailActions(options)
 	expectedError := fmt.Errorf("cannot parse startdate: parsing time \"%v\": month out of range", options.StartDate)
 	if err.Error() != expectedError.Error() {
-		fmt.Println("err.Error() is", err.Error())
-		fmt.Println("expetected error is", expectedError.Error())
 		t.Fatal("The error obtained is not the expected")
 	}
 }
@@ -758,6 +966,8 @@ func TestApp_PapertrailActionsObtainIncorrectEndDate(t *testing.T) {
 		"default search test",
 		"*",
 		"o",
+		false,
+		true,
 		false,
 		"04/08/2020 10:20:00",
 		"14/08/2020 10:40:00",
@@ -783,6 +993,8 @@ func TestApp_PapertrailActionsObtainIncorrectDates(t *testing.T) {
 		"default search test",
 		"*",
 		"o",
+		false,
+		true,
 		false,
 		nowDate,
 		nowDateLessEightHours,
