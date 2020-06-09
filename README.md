@@ -112,7 +112,7 @@ Examples of implementation for the different actions available are given below:
          [--end-date <end-date>] [--path <path>]
       
       VERSION:
-         1.2.0
+         1.3.0
       
       AUTHOR:
          Xoan Mallon <xoanmallon@gmail.com>

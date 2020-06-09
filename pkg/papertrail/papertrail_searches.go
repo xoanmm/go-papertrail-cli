@@ -18,7 +18,7 @@ const papertrailApiSearchesEndpoint = papertrailApiBaseUrl + "searches.json"
 func doPapertrailSearchNecessaryActions(searchName string, searchQuery string, groupId int,
 	actionName string) (*Item, error) {
 	var searchItem *Item
-	searchObject, err := checkSearchExists(searchName, searchQuery, groupId)
+	searchObject, err := checkSearchExists(searchName, groupId)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +69,7 @@ func deleteSearch(searchName string, searchId int) (*Item, error) {
 
 // checkSearchExists checks if a search exists in papertrail specific group, returning the information
 // of this one in case it exists
-func checkSearchExists(searchName string, searchQuery string, groupId int) (*SearchObject, error) {
+func checkSearchExists(searchName string, groupId int) (*SearchObject, error) {
 	var search *SearchObject
 	getAllSearchesResp, err := apiOperation("GET", papertrailApiSearchesEndpoint, nil)
 	if err != nil {
@@ -79,7 +79,7 @@ func checkSearchExists(searchName string, searchQuery string, groupId int) (*Sea
 		var searches []SearchObject
 		json.Unmarshal([]byte(getAllSearchesResp.Body), &searches)
 		for _, item := range searches {
-			if item.Name == searchName && item.Query == searchQuery && item.Group.ID == groupId {
+			if item.Name == searchName && item.Group.ID == groupId {
 				search = NewSearchObject(item.ID, item.Name, item.Query, item.Group, item.Links)
 				break
 			}

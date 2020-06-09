@@ -6,7 +6,7 @@ USAGE:
    go-papertrail-cli [--group-name <group-name>] [--system-wildcard <wildcard>] [--search <search-name>] [--query <query>] [--action <action>] [--delete-all-searches <delete-all-searches>] [--delete-only-searches <delete-only-searches>] [--delete-all-systems <delete-all-systems>]  [--delete-only-systems <delete-only-systems>][--start-date <start-date>] [--end-date <end-date>] [--path <path>]
 
 VERSION:
-   1.2.0
+   1.3.0
 
 AUTHOR:
    Xoan Mallon <xoanmallon@gmail.com>

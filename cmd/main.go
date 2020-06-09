@@ -13,7 +13,7 @@ import (
 // mm/dd/yyyy HH:MM:SSx
 const dateLayout = "01/02/2006 15:04:05"
 
-var version = "1.2.0"
+var version = "1.3.0"
 var date = time.Now().Format(time.RFC3339)
 var now = time.Now().UTC()
 var nowDate = now.Format(dateLayout)
