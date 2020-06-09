@@ -43,10 +43,12 @@ func (a *App) PapertrailActions(options *Options) ([]Item, *string, error) {
 func getItems(options Options, actionName string, startDate int64, endDate int64) (*[]Item, *string, error) {
 	var papertrailCreatedOrRemovedItems []Item
 	var err error
-	papertrailCreatedOrRemovedItems, err = addSystemElements(options.SystemType, options.SystemWildcard,
-		options.DestinationPort, options.DestinationId, options.IpAddress, actionName, options.DeleteAllSystems)
-	if err != nil {
-		return nil, nil, err
+	if !options.DeleteOnlySearches {
+		papertrailCreatedOrRemovedItems, err = addSystemElements(options.SystemType, options.SystemWildcard,
+			options.DestinationPort, options.DestinationId, options.IpAddress, actionName, options.DeleteAllSystems)
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 	if !options.DeleteOnlySystems {
 		groupAndSearchItems, err := addGroupsAndSearches(options.GroupName, options.SystemWildcard, actionName,

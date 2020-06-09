@@ -3,7 +3,7 @@
 [![License](https://img.shields.io/github/license/xoanmm/go-papertrail-cli)](https://github.com/xoanmm/go-papertrail-cli/LICENSE)
 
 # go-papertrail-cli
-A simple tool to interacts with [Papertrail](https://papertrailapp.com/) through its [api](https://help.papertrailapp.com/kb/how-it-works/http-api/) to perform both log collection actions and the creation of [systems](https://help.papertrailapp.com/kb/how-it-works/adding-and-removing-senders/), [groups](https://help.papertrailapp.com/kb/how-it-works/groups/) and [searches](https://help.papertrailapp.com/kb/how-it-works/search-syntax).
+A simple tool to interacts with [Papertrail](https://papertrailapp.com/) through its [API](https://help.papertrailapp.com/kb/how-it-works/http-api/) to perform both log collection actions and the creation of [systems](https://help.papertrailapp.com/kb/how-it-works/adding-and-removing-senders/), [groups](https://help.papertrailapp.com/kb/how-it-works/groups/) and [searches](https://help.papertrailapp.com/kb/how-it-works/search-syntax).
 
 The tool has been created with the intention of facilitating the creation and/or elimination of the elements mentioned in papertrail, as well as obtaining logs of a given search and storing them in an orderly manner in a file.
 
@@ -41,7 +41,7 @@ Examples of implementation for the different actions available are given below:
   - Example of deleting only the search resource in a certain group.
 
        ```bash
-       $ ./go-papertrail-cli -a d -g "group-test" -w "15.21.10.1, 3.2.13.90" -S "default search test" -q "*" -p 23633 -t "hostname"
+       $ ./go-papertrail-cli -a d -g "group-test" -w "15.21.10.1, 3.2.13.90" -S "default search test" -q "*" -p 23633 -t "hostname" --delete-only-searches true
        2020/05/04 16:45:01 Group with name group-test exists with id 19745402
        2020/05/04 16:45:01 Search with name default search test exists with id 85901652
        2020/05/04 16:45:02 Search with name default search test and id 85901652 was successfully deleted
@@ -105,19 +105,21 @@ Examples of implementation for the different actions available are given below:
 
       NAME:
          go-papertrail-cli - interacts with papertrail through its api to perform both log collection actions and the creation/deletion of systems, groups and saved searches
-
+      
       USAGE:
-         go-papertrail-cli [--group-name <group-name>] [--system-wildcard <wildcard>] [--search <search-name>] [--query <query>] [--action <action>] [--delete-all-searches <delete-all-searches>] [--delete-all-systems <delete-all-systems>]  [--start-date <start-date>] [--end-date <end-date>] [--path <path>]
-
+         go-papertrail-cli [--group-name <group-name>] [--system-wildcard <wildcard>] [--search <search-name>] [--query <query>] [--action <action>] [--delete-all-searches <delete-all-searches>] 
+         [--delete-only-searches <delete-only-searches>] [--delete-all-systems <delete-all-systems>]  [--delete-only-systems <delete-only-systems>][--start-date <start-date>] 
+         [--end-date <end-date>] [--path <path>]
+      
       VERSION:
-         1.1.0
-
+         1.2.0
+      
       AUTHOR:
          Xoan Mallon <xoanmallon@gmail.com>
-
+      
       COMMANDS:
          help, h  Shows a list of commands or help for one command
-
+      
       GLOBAL OPTIONS:
          --group-name value, -g value        group defined or to be defined in papertrail (default: "my-log-group")
          --system-wildcard value, -w value   wildcard to be applied on the systems defined in papertrail (default: "*")
@@ -129,6 +131,7 @@ Examples of implementation for the different actions available are given below:
          --query value, -q value             query to be performed on the group of logs or applied on the search to be created (default: "*")
          --action value, -a value            Action to be performed with the information provided for papertrail, possible values only c(create), o(obtain) or d(delete) (default: "c")
          --delete-all-searches, -d           Indicates if all searches in a group or a specific search are going to be deleted (default: false)
+         --delete-only-searches              Indicates if only searches specified are going to be deleted (default: false)
          --delete-all-systems, -D            Indicates if all systems specified are going to be deleted (default: true)
          --delete-only-systems               Indicates if only systems specified are going to be deleted (default: false)
          --start-date value, -s value        filter only from a date specified ('mm/dd/yyyy hh:mm:ss' format UTC time) (default: $ACTUAL_DATE - 8hours)

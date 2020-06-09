@@ -13,7 +13,7 @@ import (
 // mm/dd/yyyy HH:MM:SSx
 const dateLayout = "01/02/2006 15:04:05"
 
-var version = "1.1.0"
+var version = "1.2.0"
 var date = time.Now().Format(time.RFC3339)
 var now = time.Now().UTC()
 var nowDate = now.Format(dateLayout)
@@ -36,7 +36,8 @@ func buildCLI(app *papertrail.App) *cli.App {
 		Compiled: d,
 		UsageText: "go-papertrail-cli [--group-name <group-name>] [--system-wildcard <wildcard>] " +
 			"[--search <search-name>] [--query <query>] [--action <action>] " +
-			"[--delete-all-searches <delete-all-searches>] [--delete-all-systems <delete-all-systems>]  " +
+			"[--delete-all-searches <delete-all-searches>] [--delete-only-searches <delete-only-searches>] " +
+			"[--delete-all-systems <delete-all-systems>]  [--delete-only-systems <delete-only-systems>]" +
 			"[--start-date <start-date>] [--end-date <end-date>] [--path <path>]",
 		Authors: []*cli.Author{
 			{
@@ -116,6 +117,12 @@ func buildCLI(app *papertrail.App) *cli.App {
 			},
 
 			&cli.BoolFlag{
+				Name:  "delete-only-searches",
+				Usage: "Indicates if only searches specified are going to be deleted",
+				Value: false,
+			},
+
+			&cli.BoolFlag{
 				Name:    "delete-all-systems",
 				Usage:   "Indicates if all systems specified are going to be deleted",
 				Value:   true,
@@ -157,21 +164,22 @@ func buildCLI(app *papertrail.App) *cli.App {
 			actionName := c.String("action")
 
 			papertrailActions, action, err := app.PapertrailActions(&papertrail.Options{
-				GroupName:         logGroupName,
-				SystemWildcard:    c.String("system-wildcard"),
-				DestinationPort:   c.Int("destination-port"),
-				DestinationId:     c.Int("destination-id"),
-				IpAddress:         c.String("ip-address"),
-				SystemType:        c.String("system-type"),
-				Search:            c.String("search"),
-				Query:             c.String("query"),
-				Action:            actionName,
-				DeleteAllSystems:  c.Bool("delete-all-systems"),
-				DeleteOnlySystems: c.Bool("delete-only-systems"),
-				DeleteAllSearches: c.Bool("delete-all-searches"),
-				StartDate:         c.String("start-date"),
-				EndDate:           c.String("end-date"),
-				Path:              c.String("path"),
+				GroupName:          logGroupName,
+				SystemWildcard:     c.String("system-wildcard"),
+				DestinationPort:    c.Int("destination-port"),
+				DestinationId:      c.Int("destination-id"),
+				IpAddress:          c.String("ip-address"),
+				SystemType:         c.String("system-type"),
+				Search:             c.String("search"),
+				Query:              c.String("query"),
+				Action:             actionName,
+				DeleteAllSystems:   c.Bool("delete-all-systems"),
+				DeleteOnlySystems:  c.Bool("delete-only-systems"),
+				DeleteAllSearches:  c.Bool("delete-all-searches"),
+				DeleteOnlySearches: c.Bool("delete-only-searches"),
+				StartDate:          c.String("start-date"),
+				EndDate:            c.String("end-date"),
+				Path:               c.String("path"),
 			})
 			printFinalResultIfNotErrorsDetected(err, action, papertrailActions)
 			return err

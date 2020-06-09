@@ -269,15 +269,17 @@ func printMessageActionDelete(options Options) {
 	if options.DeleteOnlySystems {
 		log.Printf("Checking conditions for do action '%s' in papertrail params: "+
 			"[--group-name %s] [--system-wildcard %s] [--delete-all-searches %t] "+
-			"[--delete-all-systems %t] [--delete-only-systems %t]\n",
+			"[--delete-only-searches %t] [--delete-all-systems %t] [--delete-only-systems %t]\n",
 			options.Action, options.GroupName, options.SystemWildcard,
-			options.DeleteAllSearches, options.DeleteAllSystems, options.DeleteOnlySystems)
+			options.DeleteAllSearches, options.DeleteOnlySearches, options.DeleteAllSystems,
+			options.DeleteOnlySystems)
 	} else {
 		log.Printf("Checking conditions for do action '%s' in papertrail params: "+
 			"[--group-name %s] [--system-wildcard %s] [--search %s] [--delete-all-searches %t] "+
-			"[--delete-all-systems %t] [--delete-only-systems %t]\n",
+			"[--delete-only-searches %t] [--delete-all-systems %t] [--delete-only-systems %t]\n",
 			options.Action, options.GroupName, options.SystemWildcard, options.Search,
-			options.DeleteAllSearches, options.DeleteAllSystems, options.DeleteOnlySystems)
+			options.DeleteAllSearches, options.DeleteOnlySearches, options.DeleteAllSystems,
+			options.DeleteOnlySystems)
 	}
 }
 

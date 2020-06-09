@@ -55,7 +55,8 @@ func doPapertrailEventsSearch(groupName string, groupId int, searchName string, 
 		if eventsMessages != nil {
 			numOfEvents = len(eventsMessages)
 		}
-		eventsSearchItem = NewItem(0, "EventsSearch", getNameOfFileLogsSaved(pathFileName)+" with "+strconv.Itoa(numOfEvents)+" events retrieved", false, false)
+		eventsSearchItem = NewItem(0, "EventsSearch", getNameOfFileLogsSaved(pathFileName)+
+			" with "+strconv.Itoa(numOfEvents)+" events retrieved", false, false)
 	} else {
 		err := convertStatusCodeToError(getEventsSearchResp.StatusCode, "EventsSearch", "Obtaining")
 		return nil, err

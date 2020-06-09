@@ -35,6 +35,9 @@ type Options struct {
 	// Indicates if all searches in a group or a specific search are going to be deleted
 	DeleteAllSearches bool
 
+	// Indicates if only searches+ are going to be deleted
+	DeleteOnlySearches bool
+
 	// Indicates if all systems are going to be deleted
 	DeleteAllSystems bool
 
